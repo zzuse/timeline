@@ -6,6 +6,7 @@
 //
 
 import Testing
+import UIKit
 @testable import timeline
 
 struct timelineTests {
@@ -24,5 +25,21 @@ struct timelineTests {
         let note = Note(text: "Hello", imagePaths: [], tags: [])
         #expect(note.isPinned == false)
         #expect(note.createdAt <= note.updatedAt)
+    }
+
+    @Test func imageStoreSaveLoadDelete() async throws {
+        let store = ImageStore()
+        let image = UIImage(systemName: "star")!
+
+        let paths = try store.save(images: [image])
+        #expect(paths.count == 1)
+
+        let loaded = try store.load(path: paths[0])
+        #expect(loaded.size != .zero)
+
+        try store.delete(paths: paths)
+        #expect(throws: ImageStore.ImageStoreError.missingFile) {
+            _ = try store.load(path: paths[0])
+        }
     }
 }
