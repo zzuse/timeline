@@ -14,9 +14,10 @@ struct DetailView: View {
     @State private var isShowingError = false
 
     private let imageStore = ImageStore()
+    private let audioStore = AudioStore()
 
     private var repository: NotesRepository {
-        NotesRepository(context: modelContext, imageStore: imageStore)
+        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
     }
 
     var body: some View {
@@ -30,6 +31,18 @@ struct DetailView: View {
                     Text(note.text)
                         .font(.body)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if !note.audioPaths.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Audio")
+                            .font(.headline)
+                        ForEach(Array(note.audioPaths.enumerated()), id: \.element) { index, path in
+                            if let url = try? audioStore.url(for: path) {
+                                AudioClipRow(title: "Recording \(index + 1)", url: url)
+                            }
+                        }
+                    }
                 }
 
                 if !note.tags.isEmpty {

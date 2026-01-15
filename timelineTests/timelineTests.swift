@@ -48,9 +48,9 @@ struct timelineTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
         let context = ModelContext(container)
-        let repo = NotesRepository(context: context, imageStore: ImageStore())
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore())
 
-        let note = try repo.create(text: "Hi", images: [], tagInput: ["Swift", "swift"])
+        let note = try repo.create(text: "Hi", images: [], audioPaths: [], tagInput: ["Swift", "swift"])
         #expect(note.tags.count == 1)
         #expect(note.updatedAt >= note.createdAt)
     }

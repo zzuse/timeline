@@ -14,6 +14,7 @@ struct TimelineView: View {
     @State private var selectedTags: [String] = []
 
     private let imageStore = ImageStore()
+    private let audioStore = AudioStore()
 
     private var sortedNotes: [Note] {
         let filtered = TimelineFilter.search(text: searchText, tags: selectedTags).apply(to: notes)
@@ -145,7 +146,7 @@ struct TimelineView: View {
     }
 
     private var repository: NotesRepository {
-        NotesRepository(context: modelContext, imageStore: imageStore)
+        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
     }
 
     private func togglePin(_ note: Note) {

@@ -1,3 +1,4 @@
+import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -19,27 +20,36 @@ struct EditView: View {
     @State private var existingImages: [StoredImage] = []
     @State private var newImages: [UIImage] = []
     @State private var removedPaths: [String] = []
+    @State private var existingAudioPaths: [String] = []
+    @State private var newAudioPaths: [String] = []
+    @State private var removedAudioPaths: [String] = []
+    @State private var isRecording = false
+    @State private var audioRecorder: AVAudioRecorder?
+    @State private var pendingAudioPath: String?
+    @State private var didSave = false
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var isShowingCamera = false
     @State private var errorMessage: String?
     @State private var isShowingError = false
 
     private let imageStore = ImageStore()
+    private let audioStore = AudioStore()
 
     init(note: Note) {
         self.note = note
         _text = State(initialValue: note.text)
         _tags = State(initialValue: note.tags.map(\.name))
         _isPinned = State(initialValue: note.isPinned)
+        _existingAudioPaths = State(initialValue: note.audioPaths)
     }
 
     private var repository: NotesRepository {
-        NotesRepository(context: modelContext, imageStore: imageStore)
+        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
     }
 
     private var hasContent: Bool {
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return hasText || !existingImages.isEmpty || !newImages.isEmpty
+        return hasText || !existingImages.isEmpty || !newImages.isEmpty || !existingAudioPaths.isEmpty || !newAudioPaths.isEmpty
     }
 
     var body: some View {
@@ -102,6 +112,60 @@ struct EditView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Audio")
+                        .font(.headline)
+
+                    if !existingAudioPaths.isEmpty {
+                        Text("Saved")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(existingAudioPaths.enumerated()), id: \.element) { index, path in
+                            if let url = try? audioStore.url(for: path) {
+                                AudioClipRow(
+                                    title: "Recording \(index + 1)",
+                                    url: url
+                                ) {
+                                    removeExistingRecording(path)
+                                }
+                            }
+                        }
+                    }
+
+                    if !newAudioPaths.isEmpty {
+                        Text("New")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(newAudioPaths.enumerated()), id: \.element) { index, path in
+                            if let url = try? audioStore.url(for: path) {
+                                AudioClipRow(
+                                    title: "New Recording \(index + 1)",
+                                    url: url
+                                ) {
+                                    removeNewRecording(path)
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Button {
+                            toggleRecording()
+                        } label: {
+                            Label(
+                                isRecording ? "Stop Recording" : "Record",
+                                systemImage: isRecording ? "stop.circle.fill" : "mic.circle"
+                            )
+                        }
+
+                        if isRecording {
+                            Text("Recording...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Tags")
                         .font(.headline)
                     TagInputView(tags: $tags)
@@ -134,6 +198,14 @@ struct EditView: View {
         .sheet(isPresented: $isShowingCamera) {
             CameraPicker(isPresented: $isShowingCamera) { image in
                 newImages.append(image)
+            }
+        }
+        .onDisappear {
+            if isRecording {
+                stopRecording()
+            }
+            if !didSave {
+                try? audioStore.delete(paths: newAudioPaths)
             }
         }
         .alert("Unable to Save", isPresented: $isShowingError) {
@@ -178,13 +250,75 @@ struct EditView: View {
                 text: text,
                 images: newImages,
                 removedPaths: removedPaths,
+                audioPaths: newAudioPaths,
+                removedAudioPaths: removedAudioPaths,
                 tagInput: tags,
                 isPinned: isPinned
             )
+            didSave = true
             dismiss()
         } catch {
             showError("Failed to update this note. Please try again.")
         }
+    }
+
+    private func toggleRecording() {
+        if isRecording {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    private func startRecording() {
+        let audioSession = AVAudioSession.sharedInstance()
+        audioSession.requestRecordPermission { allowed in
+            DispatchQueue.main.async {
+                guard allowed else {
+                    showError("Microphone access is required to record audio.")
+                    return
+                }
+                do {
+                    try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth])
+                    try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                    let recording = audioStore.makeRecordingURL()
+                    let settings: [String: Any] = [
+                        AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                        AVSampleRateKey: 12000,
+                        AVNumberOfChannelsKey: 1,
+                        AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                    ]
+                    let recorder = try AVAudioRecorder(url: recording.url, settings: settings)
+                    recorder.prepareToRecord()
+                    recorder.record()
+                    audioRecorder = recorder
+                    pendingAudioPath = recording.filename
+                    isRecording = true
+                } catch {
+                    showError("Unable to start recording. Please try again.")
+                }
+            }
+        }
+    }
+
+    private func stopRecording() {
+        audioRecorder?.stop()
+        audioRecorder = nil
+        isRecording = false
+        if let path = pendingAudioPath {
+            newAudioPaths.append(path)
+            pendingAudioPath = nil
+        }
+    }
+
+    private func removeExistingRecording(_ path: String) {
+        existingAudioPaths.removeAll { $0 == path }
+        removedAudioPaths.append(path)
+    }
+
+    private func removeNewRecording(_ path: String) {
+        newAudioPaths.removeAll { $0 == path }
+        try? audioStore.delete(paths: [path])
     }
 
     private func showError(_ message: String) {

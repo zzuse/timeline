@@ -54,3 +54,44 @@ final class ImageStore {
         }
     }
 }
+
+final class AudioStore {
+    enum AudioStoreError: Error {
+        case missingFile
+    }
+
+    private let fileManager = FileManager.default
+    private let folderName = "Audio"
+
+    private var baseURL: URL {
+        fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(folderName)
+    }
+
+    init() {
+        try? fileManager.createDirectory(at: baseURL, withIntermediateDirectories: true)
+    }
+
+    func makeRecordingURL() -> (url: URL, filename: String) {
+        let filename = UUID().uuidString + ".m4a"
+        let url = baseURL.appendingPathComponent(filename)
+        return (url, filename)
+    }
+
+    func url(for path: String) throws -> URL {
+        let url = baseURL.appendingPathComponent(path)
+        guard fileManager.fileExists(atPath: url.path) else {
+            throw AudioStoreError.missingFile
+        }
+        return url
+    }
+
+    func delete(paths: [String]) throws {
+        for path in paths {
+            let url = baseURL.appendingPathComponent(path)
+            if fileManager.fileExists(atPath: url.path) {
+                try fileManager.removeItem(at: url)
+            }
+        }
+    }
+}

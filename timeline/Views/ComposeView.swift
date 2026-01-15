@@ -1,3 +1,4 @@
+import AVFoundation
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -10,17 +11,23 @@ struct ComposeView: View {
     @State private var tags: [String] = []
     @State private var selectedImages: [UIImage] = []
     @State private var photoItems: [PhotosPickerItem] = []
+    @State private var recordedAudioPaths: [String] = []
+    @State private var isRecording = false
+    @State private var audioRecorder: AVAudioRecorder?
+    @State private var pendingAudioPath: String?
+    @State private var didSave = false
     @State private var isShowingCamera = false
     @State private var errorMessage: String?
     @State private var isShowingError = false
 
     private let imageStore = ImageStore()
+    private let audioStore = AudioStore()
 
     private var repository: NotesRepositoryType {
         if isSimulatingSaveFailure {
             return FailingNotesRepository()
         }
-        return NotesRepository(context: modelContext, imageStore: imageStore)
+        return NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
     }
 
     private var isSimulatingSaveFailure: Bool {
@@ -29,7 +36,7 @@ struct ComposeView: View {
 
     private var canSave: Bool {
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return hasText || !selectedImages.isEmpty
+        return hasText || !selectedImages.isEmpty || !recordedAudioPaths.isEmpty
     }
 
     var body: some View {
@@ -79,6 +86,41 @@ struct ComposeView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
+                    Text("Audio")
+                        .font(.headline)
+
+                    if !recordedAudioPaths.isEmpty {
+                        ForEach(Array(recordedAudioPaths.enumerated()), id: \.element) { index, path in
+                            if let url = try? audioStore.url(for: path) {
+                                AudioClipRow(
+                                    title: "Recording \(index + 1)",
+                                    url: url
+                                ) {
+                                    removeRecording(path)
+                                }
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        Button {
+                            toggleRecording()
+                        } label: {
+                            Label(
+                                isRecording ? "Stop Recording" : "Record",
+                                systemImage: isRecording ? "stop.circle.fill" : "mic.circle"
+                            )
+                        }
+
+                        if isRecording {
+                            Text("Recording...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Tags")
                         .font(.headline)
                     TagInputView(tags: $tags)
@@ -108,6 +150,14 @@ struct ComposeView: View {
                 selectedImages.append(image)
             }
         }
+        .onDisappear {
+            if isRecording {
+                stopRecording()
+            }
+            if !didSave {
+                try? audioStore.delete(paths: recordedAudioPaths)
+            }
+        }
         .alert("Unable to Save", isPresented: $isShowingError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -134,11 +184,71 @@ struct ComposeView: View {
 
     private func save() {
         do {
-            _ = try repository.create(text: text, images: selectedImages, tagInput: tags)
+            _ = try repository.create(
+                text: text,
+                images: selectedImages,
+                audioPaths: recordedAudioPaths,
+                tagInput: tags
+            )
+            didSave = true
             dismiss()
         } catch {
             showError("Failed to save this note. Please try again.")
         }
+    }
+
+    private func toggleRecording() {
+        if isRecording {
+            stopRecording()
+        } else {
+            startRecording()
+        }
+    }
+
+    private func startRecording() {
+        let audioSession = AVAudioSession.sharedInstance()
+        audioSession.requestRecordPermission { allowed in
+            DispatchQueue.main.async {
+                guard allowed else {
+                    showError("Microphone access is required to record audio.")
+                    return
+                }
+                do {
+                    try audioSession.setCategory(.playAndRecord, options: [.defaultToSpeaker, .allowBluetooth])
+                    try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+                    let recording = audioStore.makeRecordingURL()
+                    let settings: [String: Any] = [
+                        AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+                        AVSampleRateKey: 12000,
+                        AVNumberOfChannelsKey: 1,
+                        AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+                    ]
+                    let recorder = try AVAudioRecorder(url: recording.url, settings: settings)
+                    recorder.prepareToRecord()
+                    recorder.record()
+                    audioRecorder = recorder
+                    pendingAudioPath = recording.filename
+                    isRecording = true
+                } catch {
+                    showError("Unable to start recording. Please try again.")
+                }
+            }
+        }
+    }
+
+    private func stopRecording() {
+        audioRecorder?.stop()
+        audioRecorder = nil
+        isRecording = false
+        if let path = pendingAudioPath {
+            recordedAudioPaths.append(path)
+            pendingAudioPath = nil
+        }
+    }
+
+    private func removeRecording(_ path: String) {
+        recordedAudioPaths.removeAll { $0 == path }
+        try? audioStore.delete(paths: [path])
     }
 
     private func showError(_ message: String) {
@@ -152,7 +262,7 @@ private struct FailingNotesRepository: NotesRepositoryType {
         case simulated
     }
 
-    func create(text: String, images: [UIImage], tagInput: [String]) throws -> Note {
+    func create(text: String, images: [UIImage], audioPaths: [String], tagInput: [String]) throws -> Note {
         throw Failure.simulated
     }
 }

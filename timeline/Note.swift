@@ -8,14 +8,16 @@ final class Note: Identifiable {
     var updatedAt: Date
     var isPinned: Bool
     var imagePaths: [String]
+    var audioPaths: [String]
     var tags: [Tag]
 
-    init(text: String, imagePaths: [String], tags: [Tag]) {
+    init(text: String, imagePaths: [String], audioPaths: [String] = [], tags: [Tag]) {
         self.text = text
         self.createdAt = Date()
         self.updatedAt = Date()
         self.isPinned = false
         self.imagePaths = imagePaths
+        self.audioPaths = audioPaths
         self.tags = tags
     }
 }
