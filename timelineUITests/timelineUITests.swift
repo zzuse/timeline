@@ -23,6 +23,15 @@ final class timelineUITests: XCTestCase {
     }
 
     @MainActor
+    private func createNote(app: XCUIApplication, text: String) {
+        app.navigationBars["Timeline"].buttons["New Note"].tap()
+        let textEditor = app.textViews.firstMatch
+        textEditor.tap()
+        textEditor.typeText(text)
+        app.navigationBars["New Note"].buttons["Save"].tap()
+    }
+
+    @MainActor
     func testExample() throws {
         // UI tests must launch the application that they test.
         let app = XCUIApplication()
@@ -47,5 +56,52 @@ final class timelineUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.navigationBars["Timeline"].exists)
+    }
+
+    @MainActor
+    func testComposeOpensSheet() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        app.navigationBars["Timeline"].buttons["New Note"].tap()
+        XCTAssertTrue(app.navigationBars["New Note"].exists)
+    }
+
+    @MainActor
+    func testComposeSaveFailureShowsAlert() throws {
+        let app = XCUIApplication()
+        app.launchArguments.append("-simulateSaveFailure")
+        app.launch()
+
+        app.navigationBars["Timeline"].buttons["New Note"].tap()
+
+        let textEditor = app.textViews.firstMatch
+        textEditor.tap()
+        textEditor.typeText("Draft")
+
+        app.navigationBars["New Note"].buttons["Save"].tap()
+
+        let alert = app.alerts["Unable to Save"]
+        XCTAssertTrue(alert.exists)
+        alert.buttons["OK"].tap()
+
+        XCTAssertTrue(app.navigationBars["New Note"].exists)
+        let value = textEditor.value as? String ?? ""
+        XCTAssertTrue(value.contains("Draft"))
+    }
+
+    @MainActor
+    func testDetailViewPinToggle() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        createNote(app: app, text: "Detail Note")
+        app.staticTexts["Detail Note"].firstMatch.tap()
+
+        XCTAssertTrue(app.navigationBars["Note"].exists)
+        let pinButton = app.navigationBars["Note"].buttons["Pin"]
+        XCTAssertTrue(pinButton.exists)
+        pinButton.tap()
+        XCTAssertTrue(app.navigationBars["Note"].buttons["Unpin"].exists)
     }
 }

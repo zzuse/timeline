@@ -2,10 +2,22 @@ import SwiftData
 import SwiftUI
 
 struct TimelineView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var notes: [Note]
 
+    @State private var isShowingCompose = false
+    @State private var isShowingFilters = false
+    @State private var editingNote: Note?
+    @State private var errorMessage: String?
+    @State private var isShowingError = false
+    @State private var searchText = ""
+    @State private var selectedTags: [String] = []
+
+    private let imageStore = ImageStore()
+
     private var sortedNotes: [Note] {
-        NoteSorter.sort(notes)
+        let filtered = TimelineFilter.search(text: searchText, tags: selectedTags).apply(to: notes)
+        return NoteSorter.sort(filtered)
     }
 
     private var pinnedNotes: [Note] {
@@ -29,14 +41,66 @@ struct TimelineView: View {
                     if !pinnedNotes.isEmpty {
                         Section("Pinned") {
                             ForEach(pinnedNotes, id: \.persistentModelID) { note in
-                                NoteRow(note: note)
+                                NavigationLink {
+                                    DetailView(note: note)
+                                } label: {
+                                    NoteRow(note: note)
+                                }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    Button {
+                                        editingNote = note
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+
+                                    Button {
+                                        togglePin(note)
+                                    } label: {
+                                        Label(note.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+                                    }
+                                    .tint(.orange)
+                                }
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        delete(note)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             }
                         }
                     }
 
                     Section("All") {
                         ForEach(regularNotes, id: \.persistentModelID) { note in
-                            NoteRow(note: note)
+                            NavigationLink {
+                                DetailView(note: note)
+                            } label: {
+                                NoteRow(note: note)
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    editingNote = note
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+
+                                Button {
+                                    togglePin(note)
+                                } label: {
+                                    Label(note.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+                                }
+                                .tint(.orange)
+                            }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    delete(note)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -44,6 +108,67 @@ struct TimelineView: View {
             }
         }
         .navigationTitle("Timeline")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isShowingCompose = true
+                } label: {
+                    Label("New Note", systemImage: "square.and.pencil")
+                }
+            }
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    isShowingFilters = true
+                } label: {
+                    Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingCompose) {
+            NavigationStack {
+                ComposeView()
+            }
+        }
+        .sheet(isPresented: $isShowingFilters) {
+            SearchFilterView(searchText: $searchText, selectedTags: $selectedTags)
+        }
+        .sheet(item: $editingNote) { note in
+            NavigationStack {
+                EditView(note: note)
+            }
+        }
+        .alert("Something went wrong", isPresented: $isShowingError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "Unknown error")
+        }
+    }
+
+    private var repository: NotesRepository {
+        NotesRepository(context: modelContext, imageStore: imageStore)
+    }
+
+    private func togglePin(_ note: Note) {
+        note.isPinned.toggle()
+        note.updatedAt = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            showError("Unable to update pin status.")
+        }
+    }
+
+    private func delete(_ note: Note) {
+        do {
+            try repository.delete(note: note)
+        } catch {
+            showError("Unable to delete this note.")
+        }
+    }
+
+    private func showError(_ message: String) {
+        errorMessage = message
+        isShowingError = true
     }
 }
 

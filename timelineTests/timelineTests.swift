@@ -70,4 +70,24 @@ struct timelineTests {
         #expect(sorted.first?.isPinned == true)
         #expect(sorted.dropFirst().map { $0.createdAt } == [newer.createdAt, older.createdAt])
     }
+
+    @Test func textFilterMatchesCaseInsensitive() async throws {
+        let notes = [
+            Note(text: "Hello Swift", imagePaths: [], tags: []),
+            Note(text: "Photo", imagePaths: [], tags: [])
+        ]
+
+        let filtered = TimelineFilter.text("swift").apply(to: notes)
+
+        #expect(filtered.count == 1)
+        #expect(filtered.first?.text == "Hello Swift")
+    }
+
+    @Test func tagFilterStripsHashPrefix() async throws {
+        let note = Note(text: "Tagged", imagePaths: [], tags: [Tag(name: "swift")])
+
+        let filtered = TimelineFilter.search(text: "", tags: ["#swift"]).apply(to: [note])
+
+        #expect(filtered.count == 1)
+    }
 }

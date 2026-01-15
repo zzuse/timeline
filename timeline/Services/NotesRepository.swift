@@ -2,7 +2,11 @@ import Foundation
 import SwiftData
 import UIKit
 
-final class NotesRepository {
+protocol NotesRepositoryType {
+    func create(text: String, images: [UIImage], tagInput: [String]) throws -> Note
+}
+
+final class NotesRepository: NotesRepositoryType {
     private let context: ModelContext
     private let imageStore: ImageStore
 
@@ -32,6 +36,9 @@ final class NotesRepository {
         note.text = text
         note.tags = Tag.normalized(from: tagInput)
         note.isPinned = isPinned
+        if !removedPaths.isEmpty {
+            note.imagePaths.removeAll { removedPaths.contains($0) }
+        }
         note.imagePaths.append(contentsOf: newPaths)
         note.updatedAt = Date()
         try imageStore.delete(paths: removedPaths)
