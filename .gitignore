@@ -1,2 +1,11 @@
 .worktrees/
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+xcuserdata/
 timeline.xcodeproj/xcuserdata/
+timeline.xcodeproj/project.xcworkspace/xcuserdata/

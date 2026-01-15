@@ -4,7 +4,7 @@
 Build a local-only personal timeline notes app for iOS 17+ using SwiftUI + SwiftData. Users can post short notes with images and tags, browse a timeline, search/filter by text and tags, and edit/delete/pin notes. Images are stored on disk; SwiftData stores metadata and paths.
 
 ## Goals
-- Post short notes with images (camera + photo library) and tags.
+- Post short notes with images (camera + photo library), audio clips, and tags.
 - Timeline browsing with pinned-first ordering, then creation time descending.
 - Search by text and filter by tags.
 - Edit, delete, and pin/unpin notes.
@@ -30,6 +30,7 @@ Note
 - updatedAt: Date
 - isPinned: Bool
 - imagePaths: [String]
+- audioPaths: [String]
 - tags: [Tag]
 
 Tag
@@ -38,10 +39,10 @@ Tag
 
 ## UI Components
 - TimelineView: list with sections (Pinned, All). Uses SwiftData query sorting by isPinned desc, createdAt desc.
-- NoteRow: text preview, first image thumbnail, tag chips, timestamp.
-- DetailView: full text, image grid, tags, metadata; actions for edit/delete/pin.
-- ComposeView (full-screen): TextEditor, image picker (camera + library), tag input with autocomplete, Save/Cancel.
-- EditView: same as Compose, prefilled.
+- NoteRow: text preview, first image thumbnail, audio indicator, tag chips, timestamp.
+- DetailView: full text, image grid, audio playback, tags, metadata; actions for edit/delete/pin.
+- ComposeView (full-screen): TextEditor, image picker (camera + library), audio recording, tag input with autocomplete, Save/Cancel.
+- EditView: same as Compose, prefilled, manage audio clips.
 - SearchFilterView: text field and tag chips; applies predicate or in-memory filter.
 - ImageGrid: 1-4 images layout (2x2).
 

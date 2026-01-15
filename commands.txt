@@ -1,0 +1,44 @@
+Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
+
+curl -fsSL https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
+
+mkdir -p ~/.codex/superpowers && git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
+
+mkdir -p ~/.codex/skills
+
+开发一个 iOS 应用: 个人时间线笔记:
+像 X/Twitter一样发送短笔记, 按时间线浏览, 支持图片和标签, 纯本地存储, SwiftUI + SwiftData, iOS 17+
+
+mkdir -p docs/plans
+
+git status --short
+git add docs/plans/2026-01-14-personal-timeline-design.md
+git commit -m "Add personal timeline design doc"
+~/.codex/superpowers/.codex/superpowers-codex use-skill superpowers:using-superpowers
+ls -d .worktrees 2>/dev/null || ls -d worktrees 2>/dev/null
+test -f CLAUDE.md && rg -n "worktree.*director" CLAUDE.md || true
+git check-ignore -q .worktrees 2>/dev/null && echo ignored || echo not_ignored
+git add .gitignore
+git commit -m "Ignore .worktrees directory"
+git worktree add .worktrees/timeline-notes -b feature/timeline-notes
+git status --short
+git ls-tree -r --name-only HEAD | rg 'xcodeproj'
+git add .gitignore timeline.xcodeproj/project.pbxproj timeline.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+git check-ignore -v timeline.xcodeproj/project.pbxproj
+git add -f .gitignore timeline.xcodeproj/project.pbxproj timeline.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+git commit -m "Add Xcode project to repo"
+git merge main
+~/.codex/superpowers/.codex/superpowers-codex use-skill superpowers:writing-plans
+~/.codex/superpowers/.codex/superpowers-codex use-skill superpowers:test-driven-development
+mkdir -p timeline/Models
+xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/ModelTests
+xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests
+mv timeline/Models/Note.swift timeline/Note.swift
+xcodebuild clean -scheme timeline
+git diff --stat
+~/.codex/superpowers/.codex/superpowers-codex use-skill superpowers:systematic-debugging
+xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineUITests/testDetailViewPinToggle -resultBundlePath /tmp/timeline-detailview.xcresult
+xcrun xcresulttool get --legacy --path /tmp/timeline-detailview.xcresult --format json | rg "testDetailViewPinToggle|timelineUITests"
+git status -sb
+git worktree remove /Users/z/Documents/Code/Self/timeline/timeline/.worktrees/timeline-notes
+git branch -d feature/timeline-notes
