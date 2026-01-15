@@ -40,4 +40,12 @@ final class timelineUITests: XCTestCase {
             }
         }
     }
+
+    @MainActor
+    func testTimelineShowsNavTitle() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        XCTAssertTrue(app.navigationBars["Timeline"].exists)
+    }
 }

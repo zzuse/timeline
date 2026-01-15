@@ -54,4 +54,20 @@ struct timelineTests {
         #expect(note.tags.count == 1)
         #expect(note.updatedAt >= note.createdAt)
     }
+
+    @Test func noteSorterPinnedFirst() async throws {
+        let pinned = Note(text: "Pinned", imagePaths: [], tags: [])
+        pinned.isPinned = true
+        pinned.createdAt = Date(timeIntervalSince1970: 1)
+
+        let newer = Note(text: "Newer", imagePaths: [], tags: [])
+        newer.createdAt = Date(timeIntervalSince1970: 100)
+
+        let older = Note(text: "Older", imagePaths: [], tags: [])
+        older.createdAt = Date(timeIntervalSince1970: 10)
+
+        let sorted = NoteSorter.sort([newer, older, pinned])
+        #expect(sorted.first?.isPinned == true)
+        #expect(sorted.dropFirst().map { $0.createdAt } == [newer.createdAt, older.createdAt])
+    }
 }
