@@ -5,6 +5,7 @@
 //  Created by zhen zhang on 2026-01-14.
 //
 
+import SwiftData
 import Testing
 import UIKit
 @testable import timeline
@@ -41,5 +42,16 @@ struct timelineTests {
         #expect(throws: ImageStore.ImageStoreError.missingFile) {
             _ = try store.load(path: paths[0])
         }
+    }
+
+    @Test func repositoryCreateUpdatesTimestamps() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let repo = NotesRepository(context: context, imageStore: ImageStore())
+
+        let note = try repo.create(text: "Hi", images: [], tagInput: ["Swift", "swift"])
+        #expect(note.tags.count == 1)
+        #expect(note.updatedAt >= note.createdAt)
     }
 }
