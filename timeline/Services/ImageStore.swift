@@ -45,6 +45,14 @@ final class ImageStore {
         return image
     }
 
+    func url(for path: String) throws -> URL {
+        let url = baseURL.appendingPathComponent(path)
+        guard fileManager.fileExists(atPath: url.path) else {
+            throw ImageStoreError.missingFile
+        }
+        return url
+    }
+
     func delete(paths: [String]) throws {
         for path in paths {
             let url = baseURL.appendingPathComponent(path)
