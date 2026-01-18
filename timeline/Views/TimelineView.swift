@@ -4,18 +4,27 @@ import SwiftUI
 struct TimelineView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var notes: [Note]
+    @EnvironmentObject private var syncState: NotesyncUIState
 
     @State private var isShowingCompose = false
     @State private var isShowingFilters = false
     @State private var editingNote: Note?
     @State private var errorMessage: String?
     @State private var isShowingError = false
+    @State private var isShowingSyncError = false
     @State private var searchText = ""
     @State private var selectedTags: [String] = []
 
     private let imageStore = ImageStore()
     private let audioStore = AudioStore()
     private let syncQueue = try! SyncQueue()
+    private let tokenStore = KeychainAuthTokenStore()
+
+    private var syncManager: NotesyncManager {
+        let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "replace-me")
+        let client = NotesyncClient(configuration: config, tokenStore: tokenStore)
+        return NotesyncManager(queue: syncQueue, client: client)
+    }
 
     private var sortedNotes: [Note] {
         let filtered = TimelineFilter.search(text: searchText, tags: selectedTags).apply(to: notes)
@@ -118,6 +127,16 @@ struct TimelineView: View {
                     Label("New Note", systemImage: "square.and.pencil")
                 }
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task {
+                        await syncNow()
+                    }
+                } label: {
+                    Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(syncState.isSyncing)
+            }
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     isShowingFilters = true
@@ -144,6 +163,11 @@ struct TimelineView: View {
         } message: {
             Text(errorMessage ?? "Unknown error")
         }
+        .alert("Sync Failed", isPresented: $isShowingSyncError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(syncState.lastError ?? "Unable to sync. Please try again.")
+        }
     }
 
     private var repository: NotesRepository {
@@ -166,6 +190,18 @@ struct TimelineView: View {
         } catch {
             showError("Unable to delete this note.")
         }
+    }
+
+    private func syncNow() async {
+        syncState.isSyncing = true
+        do {
+            try await syncManager.performSync()
+            syncState.lastSyncAt = Date()
+        } catch {
+            syncState.lastError = error.localizedDescription
+            isShowingSyncError = true
+        }
+        syncState.isSyncing = false
     }
 
     private func showError(_ message: String) {
