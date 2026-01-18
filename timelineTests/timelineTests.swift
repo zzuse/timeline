@@ -60,6 +60,19 @@ struct timelineTests {
         #expect(note.updatedAt >= note.createdAt)
     }
 
+    @Test func repositoryEnqueuesCreate() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let queue = try SyncQueue(baseURL: temp)
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore(), syncQueue: queue)
+
+        _ = try repo.create(text: "Hi", images: [], audioPaths: [], tagInput: [])
+
+        #expect((try queue.pending()).count == 1)
+    }
+
     @Test func noteSorterPinnedFirst() async throws {
         let pinned = Note(text: "Pinned", imagePaths: [], tags: [])
         pinned.isPinned = true
