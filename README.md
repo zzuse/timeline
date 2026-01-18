@@ -37,3 +37,9 @@ xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhon
 ## Notes
 - The app requests microphone access to record audio notes.
 - All data stays on-device; deleting a note removes its media files.
+
+## Notesync (Manual Sync)
+- Endpoint: `POST /api/notesync`
+- Headers: `X-API-Key: <your-key>`, `Authorization: Bearer <jwt>`
+- Store the JWT in `KeychainAuthTokenStore` after OAuth login.
+- Update `NotesyncConfiguration` in `timeline/Views/TimelineView.swift` with your backend base URL and API key.
