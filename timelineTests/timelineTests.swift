@@ -28,6 +28,11 @@ struct timelineTests {
         #expect(note.createdAt <= note.updatedAt)
     }
 
+    @Test func noteHasStableId() async throws {
+        let note = Note(text: "Hello", imagePaths: [], tags: [])
+        #expect(note.id.isEmpty == false)
+    }
+
     @Test func imageStoreSaveLoadDelete() async throws {
         let store = ImageStore()
         let image = UIImage(systemName: "star")!

@@ -3,6 +3,7 @@ import SwiftData
 
 @Model
 final class Note: Identifiable {
+    var id: String
     var text: String
     var createdAt: Date
     var updatedAt: Date
@@ -12,6 +13,7 @@ final class Note: Identifiable {
     var tags: [Tag]
 
     init(text: String, imagePaths: [String], audioPaths: [String] = [], tags: [Tag]) {
+        self.id = UUID().uuidString
         self.text = text
         self.createdAt = Date()
         self.updatedAt = Date()
