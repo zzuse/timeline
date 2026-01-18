@@ -15,9 +15,10 @@ struct DetailView: View {
 
     private let imageStore = ImageStore()
     private let audioStore = AudioStore()
+    private let syncQueue = try! SyncQueue()
 
     private var repository: NotesRepository {
-        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
+        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore, syncQueue: syncQueue)
     }
 
     var body: some View {

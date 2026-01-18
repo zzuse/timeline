@@ -22,12 +22,13 @@ struct ComposeView: View {
 
     private let imageStore = ImageStore()
     private let audioStore = AudioStore()
+    private let syncQueue = try! SyncQueue()
 
     private var repository: NotesRepositoryType {
         if isSimulatingSaveFailure {
             return FailingNotesRepository()
         }
-        return NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
+        return NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore, syncQueue: syncQueue)
     }
 
     private var isSimulatingSaveFailure: Bool {

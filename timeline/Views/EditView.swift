@@ -34,6 +34,7 @@ struct EditView: View {
 
     private let imageStore = ImageStore()
     private let audioStore = AudioStore()
+    private let syncQueue = try! SyncQueue()
 
     init(note: Note) {
         self.note = note
@@ -44,7 +45,7 @@ struct EditView: View {
     }
 
     private var repository: NotesRepository {
-        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore)
+        NotesRepository(context: modelContext, imageStore: imageStore, audioStore: audioStore, syncQueue: syncQueue)
     }
 
     private var hasContent: Bool {

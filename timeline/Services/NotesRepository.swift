@@ -10,11 +10,13 @@ final class NotesRepository: NotesRepositoryType {
     private let context: ModelContext
     private let imageStore: ImageStore
     private let audioStore: AudioStore
+    private let syncQueue: SyncQueue
 
-    init(context: ModelContext, imageStore: ImageStore, audioStore: AudioStore) {
+    init(context: ModelContext, imageStore: ImageStore, audioStore: AudioStore, syncQueue: SyncQueue = try! SyncQueue()) {
         self.context = context
         self.imageStore = imageStore
         self.audioStore = audioStore
+        self.syncQueue = syncQueue
     }
 
     func create(text: String, images: [UIImage], audioPaths: [String], tagInput: [String]) throws -> Note {
@@ -23,6 +25,12 @@ final class NotesRepository: NotesRepositoryType {
         let note = Note(text: text, imagePaths: paths, audioPaths: audioPaths, tags: tags)
         context.insert(note)
         try context.save()
+        try syncQueue.enqueueCreate(
+            note: note,
+            imagePaths: note.imagePaths,
+            audioPaths: note.audioPaths,
+            tags: note.tags.map(\.name)
+        )
         return note
     }
 
@@ -52,9 +60,16 @@ final class NotesRepository: NotesRepositoryType {
         try imageStore.delete(paths: removedPaths)
         try audioStore.delete(paths: removedAudioPaths)
         try context.save()
+        try syncQueue.enqueueUpdate(
+            note: note,
+            imagePaths: note.imagePaths,
+            audioPaths: note.audioPaths,
+            tags: note.tags.map(\.name)
+        )
     }
 
     func delete(note: Note) throws {
+        try syncQueue.enqueueDelete(note: note)
         try imageStore.delete(paths: note.imagePaths)
         try audioStore.delete(paths: note.audioPaths)
         context.delete(note)

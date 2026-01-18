@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var syncState = NotesyncUIState()
+
     var body: some View {
         NavigationStack {
             TimelineView()
         }
+        .environmentObject(syncState)
     }
 }
 

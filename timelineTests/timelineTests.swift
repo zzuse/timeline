@@ -28,6 +28,11 @@ struct timelineTests {
         #expect(note.createdAt <= note.updatedAt)
     }
 
+    @Test func noteHasStableId() async throws {
+        let note = Note(text: "Hello", imagePaths: [], tags: [])
+        #expect(note.id.isEmpty == false)
+    }
+
     @Test func imageStoreSaveLoadDelete() async throws {
         let store = ImageStore()
         let image = UIImage(systemName: "star")!
@@ -53,6 +58,19 @@ struct timelineTests {
         let note = try repo.create(text: "Hi", images: [], audioPaths: [], tagInput: ["Swift", "swift"])
         #expect(note.tags.count == 1)
         #expect(note.updatedAt >= note.createdAt)
+    }
+
+    @Test func repositoryEnqueuesCreate() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let queue = try SyncQueue(baseURL: temp)
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore(), syncQueue: queue)
+
+        _ = try repo.create(text: "Hi", images: [], audioPaths: [], tagInput: [])
+
+        #expect((try queue.pending()).count == 1)
     }
 
     @Test func noteSorterPinnedFirst() async throws {
