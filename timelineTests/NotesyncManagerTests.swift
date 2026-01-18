@@ -14,7 +14,7 @@ struct NotesyncManagerTests {
         let client = NotesyncClient(
             configuration: .init(baseURL: URL(string: "https://example.com")!, apiKey: "key"),
             tokenStore: tokenStore,
-            session: NotesyncSessionMock()
+            session: NotesyncSessionStub()
         )
         let manager = NotesyncManager(queue: queue, client: client)
 
@@ -23,7 +23,7 @@ struct NotesyncManagerTests {
     }
 }
 
-final class NotesyncSessionMock: NotesyncSession {
+final class NotesyncSessionStub: NotesyncSession {
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
         let body = #"{"results":[]}"#.data(using: .utf8)!
