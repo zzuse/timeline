@@ -1,5 +1,11 @@
 import Foundation
 
+protocol NotesyncSession {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+}
+
+extension URLSession: NotesyncSession {}
+
 struct NotesyncConfiguration {
     let baseURL: URL
     let apiKey: String
@@ -8,11 +14,11 @@ struct NotesyncConfiguration {
 final class NotesyncClient {
     private let configuration: NotesyncConfiguration
     private let tokenStore: AuthTokenStore
-    private let session: URLSession
+    private let session: NotesyncSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(configuration: NotesyncConfiguration, tokenStore: AuthTokenStore, session: URLSession = .shared) {
+    init(configuration: NotesyncConfiguration, tokenStore: AuthTokenStore, session: NotesyncSession = URLSession.shared) {
         self.configuration = configuration
         self.tokenStore = tokenStore
         self.session = session

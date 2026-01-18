@@ -7,7 +7,7 @@ struct NotesyncClientTests {
         let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "key")
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveToken("jwt-token")
-        let session = URLSessionMock()
+        let session = NotesyncSessionMock()
         let client = NotesyncClient(configuration: config, tokenStore: tokenStore, session: session)
 
         try await client.send(payload: SyncRequest(ops: []))
@@ -17,10 +17,10 @@ struct NotesyncClientTests {
     }
 }
 
-final class URLSessionMock: URLSession {
+final class NotesyncSessionMock: NotesyncSession {
     var lastRequest: URLRequest?
 
-    override func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         lastRequest = request
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
         let body = #"{"results":[]}"#.data(using: .utf8)!

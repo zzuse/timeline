@@ -14,11 +14,19 @@ struct NotesyncManagerTests {
         let client = NotesyncClient(
             configuration: .init(baseURL: URL(string: "https://example.com")!, apiKey: "key"),
             tokenStore: tokenStore,
-            session: URLSessionMock()
+            session: NotesyncSessionMock()
         )
         let manager = NotesyncManager(queue: queue, client: client)
 
         try await manager.performSync()
         #expect((try queue.pending()).isEmpty)
+    }
+}
+
+final class NotesyncSessionMock: NotesyncSession {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        let body = #"{"results":[]}"#.data(using: .utf8)!
+        return (body, response)
     }
 }
