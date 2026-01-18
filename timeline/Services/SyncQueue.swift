@@ -79,6 +79,10 @@ final class SyncQueue {
         }
     }
 
+    func pendingCount() throws -> Int {
+        try pending().count
+    }
+
     func remove(items: [SyncQueueItem]) throws {
         for item in items {
             let filename = fileName(for: item.opId)
