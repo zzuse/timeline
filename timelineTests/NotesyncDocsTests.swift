@@ -2,7 +2,10 @@ import Testing
 
 struct NotesyncDocsTests {
     @Test func readmeMentionsNotesyncEndpoint() async throws {
-        let text = try String(contentsOfFile: "README.md", encoding: .utf8)
+        let fileURL = URL(fileURLWithPath: #filePath)
+        let rootURL = fileURL.deletingLastPathComponent().deletingLastPathComponent()
+        let readmeURL = rootURL.appendingPathComponent("README.md")
+        let text = try String(contentsOf: readmeURL, encoding: .utf8)
         #expect(text.contains("/api/notesync"))
     }
 }
