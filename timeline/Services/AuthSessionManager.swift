@@ -3,7 +3,7 @@ import Foundation
 final class AuthSessionManager: ObservableObject {
     @Published var isSignedIn = false
     private let tokenStore: AuthTokenStore
-    private let handler = AuthLinkHandler()
+    private let handler: AuthLinkHandler
     private let exchangeClient: AuthExchangeClientType
 
     init(
@@ -15,6 +15,7 @@ final class AuthSessionManager: ObservableObject {
     ) {
         self.tokenStore = tokenStore
         self.exchangeClient = exchangeClient
+        self.handler = AuthLinkHandler(baseURL: AppConfiguration.default.baseURL)
         self.isSignedIn = (try? tokenStore.loadToken()) != nil
     }
 

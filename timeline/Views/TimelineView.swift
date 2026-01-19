@@ -22,11 +22,7 @@ struct TimelineView: View {
     private let tokenStore = KeychainAuthTokenStore()
 
     private var syncManager: NotesyncManager {
-        let config = AppConfiguration(
-            baseURL: URL(string: "https://example.com")!,
-            auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "replace-me"),
-            notesync: .init(apiKey: "replace-me")
-        )
+        let config = NotesyncConfigurationProvider.defaultConfiguration
         let client = NotesyncClient(configuration: config, tokenStore: tokenStore)
         return NotesyncManager(queue: syncQueue, client: client)
     }

@@ -6,8 +6,14 @@ struct AuthCallbackResult {
 }
 
 struct AuthLinkHandler {
+    private let allowedHost: String?
+
+    init(baseURL: URL) {
+        self.allowedHost = baseURL.host
+    }
+
     func parseCallback(url: URL) -> AuthCallbackResult? {
-        guard url.host == "zzuse.duckdns.org",
+        guard url.host == allowedHost,
               url.path == "/auth/callback",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let code = components.queryItems?.first(where: { $0.name == "code" })?.value
