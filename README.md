@@ -7,7 +7,7 @@ A local-first iOS app for short personal notes, similar to a lightweight timelin
 - Tags with autocomplete and filtering
 - Pinned notes shown first, then newest-to-oldest
 - Detail view with edit/delete/pin actions
-- Local-only storage (no network or accounts)
+- Local-first storage with optional manual sync
 
 ## Tech Stack
 - SwiftUI + SwiftData

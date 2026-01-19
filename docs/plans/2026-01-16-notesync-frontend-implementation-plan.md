@@ -4,9 +4,9 @@
 
 **Goal:** Add manual, offline-first note syncing to the iOS app with a file-based queue and a `POST /api/notesync` upload flow using API key auth plus user JWT auth.
 
-**Architecture:** The app remains local-first with SwiftData as the source of truth. A new file-based sync queue stores note create/update/delete operations plus copied media. A sync manager builds a request payload from queued ops and uploads it to `/api/notesync` using an app API key and the user JWT from secure storage, then clears successful queue items.
+**Architecture:** The app remains local-first with SwiftData as the source of truth. A new file-based sync queue stores note create/update/delete operations plus copied media. A sync manager builds a request payload from queued ops and uploads it to `/api/notesync` using an app API key and the user JWT from secure storage, then clears successful queue items. Authentication uses an external browser login, universal-link callback, code exchange, and JWT persistence in Keychain.
 
-**Tech Stack:** SwiftUI, SwiftData, URLSession, Foundation Codable, Security (Keychain), Testing (swift-testing).
+**Tech Stack:** SwiftUI, SwiftData, URLSession, Foundation Codable, Security (Keychain), AuthenticationServices, Testing (swift-testing).
 
 ---
 
@@ -403,7 +403,298 @@ git commit -m "feat: add auth token store"
 
 ---
 
-### Task 4: Add sync request/response payloads and API client
+### Task 4: Add a central app config struct
+
+**Files:**
+- Create: `timeline/Services/AppConfiguration.swift`
+- Create: `timelineTests/AppConfigurationTests.swift`
+
+**Step 1: Write the failing test**
+
+```swift
+// timelineTests/AppConfigurationTests.swift
+import Foundation
+import Testing
+@testable import timeline
+
+struct AppConfigurationTests {
+    @Test func configurationHasDefaults() async throws {
+        let config = AppConfiguration.default
+        #expect(config.baseURL.absoluteString == "https://zzuse.duckdns.org")
+        #expect(config.auth.loginURL.absoluteString == "https://zzuse.duckdns.org/login")
+        #expect(config.auth.apiKey == "replace-me")
+        #expect(config.notesync.apiKey == "replace-me")
+    }
+}
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AppConfigurationTests.configurationHasDefaults`  
+Expected: FAIL with missing types.
+
+**Step 3: Write minimal implementation**
+
+```swift
+// timeline/Services/AppConfiguration.swift
+import Foundation
+
+struct AppConfiguration {
+    struct Auth {
+        let loginURL: URL
+        let apiKey: String
+    }
+
+    struct Notesync {
+        let apiKey: String
+    }
+
+    let baseURL: URL
+    let auth: Auth
+    let notesync: Notesync
+
+    static let `default` = AppConfiguration(
+        baseURL: URL(string: "https://zzuse.duckdns.org")!,
+        auth: Auth(
+            loginURL: URL(string: "https://zzuse.duckdns.org/login")!,
+            apiKey: "replace-me"
+        ),
+        notesync: Notesync(apiKey: "replace-me")
+    )
+}
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AppConfigurationTests.configurationHasDefaults`  
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add timeline/Services/AppConfiguration.swift timelineTests/AppConfigurationTests.swift
+git commit -m "feat: add app configuration defaults"
+```
+
+---
+
+### Task 5: Add login flow with external browser + universal link callback
+
+**Files:**
+- Modify: `timeline/timeline.entitlements`
+- Modify: `timeline/ContentView.swift`
+- Create: `timeline/Services/AuthLinkHandler.swift`
+- Create: `timeline/Services/AuthExchangeClient.swift`
+- Create: `timeline/Services/AuthSessionManager.swift`
+- Create: `timeline/Views/LoginView.swift`
+- Create: `timelineTests/AuthLinkHandlerTests.swift`
+- Create: `timelineTests/AuthSessionManagerTests.swift`
+
+**Step 1: Write the failing test**
+
+```swift
+// timelineTests/AuthLinkHandlerTests.swift
+import Foundation
+import Testing
+@testable import timeline
+
+struct AuthLinkHandlerTests {
+    @Test func authCallbackParsesCode() async throws {
+        let handler = AuthLinkHandler()
+        let url = URL(string: "https://zzuse.duckdns.org/auth/callback?code=abc123")!
+        let result = handler.parseCallback(url: url)
+        #expect(result?.code == "abc123")
+    }
+}
+```
+
+```swift
+// timelineTests/AuthSessionManagerTests.swift
+import Foundation
+import Testing
+@testable import timeline
+
+final class AuthExchangeStub: AuthExchangeClientType {
+    func exchange(code: String) async throws -> AuthExchangeResponse {
+        AuthExchangeResponse(accessToken: "jwt", tokenType: "Bearer", expiresIn: 3600)
+    }
+}
+
+struct AuthSessionManagerTests {
+    @Test func savesTokenAfterExchange() async throws {
+        let store = InMemoryAuthTokenStore()
+        let manager = AuthSessionManager(tokenStore: store, exchangeClient: AuthExchangeStub())
+        let url = URL(string: "https://zzuse.duckdns.org/auth/callback?code=abc123")!
+        await manager.handleCallback(url: url)
+        #expect(try store.loadToken() == "jwt")
+    }
+}
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthLinkHandlerTests.authCallbackParsesCode`  
+Expected: FAIL with missing types.
+
+**Step 3: Write minimal implementation**
+
+```swift
+// timeline/timeline.entitlements
+// Add:
+// <key>com.apple.developer.associated-domains</key>
+// <array>
+//   <string>applinks:zzuse.duckdns.org</string>
+// </array>
+```
+
+```swift
+// timeline/Services/AuthLinkHandler.swift
+import Foundation
+
+struct AuthCallbackResult {
+    let code: String
+    let state: String?
+}
+
+struct AuthLinkHandler {
+    func parseCallback(url: URL) -> AuthCallbackResult? {
+        guard url.host == "zzuse.duckdns.org",
+              url.path == "/auth/callback",
+              let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let code = components.queryItems?.first(where: { $0.name == "code" })?.value
+        else { return nil }
+        let state = components.queryItems?.first(where: { $0.name == "state" })?.value
+        return AuthCallbackResult(code: code, state: state)
+    }
+}
+```
+
+```swift
+// timeline/Services/AuthExchangeClient.swift
+import Foundation
+
+struct AuthExchangeRequest: Codable {
+    let code: String
+}
+
+struct AuthExchangeResponse: Codable {
+    let accessToken: String
+    let tokenType: String
+    let expiresIn: Int
+}
+
+protocol AuthExchangeClientType {
+    func exchange(code: String) async throws -> AuthExchangeResponse
+}
+
+final class AuthExchangeClient: AuthExchangeClientType {
+    private let baseURL: URL
+    private let apiKey: String
+    private let session: URLSession
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+
+    init(baseURL: URL, apiKey: String, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.session = session
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+    }
+
+    func exchange(code: String) async throws -> AuthExchangeResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/api/auth/exchange"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        request.httpBody = try encoder.encode(AuthExchangeRequest(code: code))
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try decoder.decode(AuthExchangeResponse.self, from: data)
+    }
+}
+```
+
+```swift
+// timeline/Services/AuthSessionManager.swift
+import Foundation
+
+final class AuthSessionManager: ObservableObject {
+    @Published var isSignedIn = false
+    private let tokenStore: AuthTokenStore
+    private let handler = AuthLinkHandler()
+    private let exchangeClient: AuthExchangeClientType
+
+    init(
+        tokenStore: AuthTokenStore = KeychainAuthTokenStore(),
+        exchangeClient: AuthExchangeClientType = AuthExchangeClient(
+            baseURL: AppConfiguration.default.baseURL,
+            apiKey: AppConfiguration.default.auth.apiKey
+        )
+    ) {
+        self.tokenStore = tokenStore
+        self.exchangeClient = exchangeClient
+        self.isSignedIn = (try? tokenStore.loadToken()) != nil
+    }
+
+    func handleCallback(url: URL) async {
+        guard let result = handler.parseCallback(url: url) else { return }
+        do {
+            let response = try await exchangeClient.exchange(code: result.code)
+            try tokenStore.saveToken(response.accessToken)
+            isSignedIn = true
+        } catch {
+            isSignedIn = false
+        }
+    }
+}
+```
+
+```swift
+// timeline/Views/LoginView.swift
+import SwiftUI
+
+struct LoginView: View {
+    let loginURL = AppConfiguration.default.auth.loginURL
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text("Sign in to Sync")
+                .font(.title2)
+            Link("Continue in Browser", destination: loginURL)
+        }
+        .padding()
+    }
+}
+```
+
+```swift
+// timeline/ContentView.swift (add auth manager + onOpenURL)
+@StateObject private var authSession = AuthSessionManager()
+...
+.environmentObject(authSession)
+.onOpenURL { url in
+    Task { await authSession.handleCallback(url: url) }
+}
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthLinkHandlerTests.authCallbackParsesCode`  
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add timeline/timeline.entitlements timeline/ContentView.swift timeline/Services/AuthLinkHandler.swift timeline/Services/AuthExchangeClient.swift timeline/Services/AuthSessionManager.swift timeline/Views/LoginView.swift timelineTests/AuthLinkHandlerTests.swift timelineTests/AuthSessionManagerTests.swift
+git commit -m "feat: add universal link login scaffolding"
+```
+
+---
+
+### Task 6: Add sync request/response payloads and API client
 
 **Files:**
 - Create: `timeline/Services/NotesyncAPI.swift`
@@ -420,7 +711,11 @@ import Testing
 
 struct NotesyncClientTests {
     @Test func clientSendsAuthHeaders() async throws {
-        let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "key")
+        let config = AppConfiguration(
+            baseURL: URL(string: "https://example.com")!,
+            auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+            notesync: .init(apiKey: "key")
+        )
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveToken("jwt-token")
         let session = URLSessionMock()
@@ -502,19 +797,14 @@ struct SyncResponse: Codable {
 // timeline/Services/NotesyncClient.swift
 import Foundation
 
-struct NotesyncConfiguration {
-    let baseURL: URL
-    let apiKey: String
-}
-
 final class NotesyncClient {
-    private let configuration: NotesyncConfiguration
+    private let configuration: AppConfiguration
     private let tokenStore: AuthTokenStore
     private let session: URLSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(configuration: NotesyncConfiguration, tokenStore: AuthTokenStore, session: URLSession = .shared) {
+    init(configuration: AppConfiguration, tokenStore: AuthTokenStore, session: URLSession = .shared) {
         self.configuration = configuration
         self.tokenStore = tokenStore
         self.session = session
@@ -528,7 +818,7 @@ final class NotesyncClient {
         var request = URLRequest(url: configuration.baseURL.appendingPathComponent("/api/notesync"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(configuration.apiKey, forHTTPHeaderField: "X-API-Key")
+        request.setValue(configuration.notesync.apiKey, forHTTPHeaderField: "X-API-Key")
         let token = try tokenStore.loadToken()
         guard let token else { throw URLError(.userAuthenticationRequired) }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -557,7 +847,7 @@ git commit -m "feat: add notesync client and payloads"
 
 ---
 
-### Task 5: Build sync manager that uploads queued ops
+### Task 7: Build sync manager that uploads queued ops
 
 **Files:**
 - Create: `timeline/Services/NotesyncManager.swift`
@@ -582,7 +872,11 @@ struct NotesyncManagerTests {
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveToken("jwt-token")
         let client = NotesyncClient(
-            configuration: .init(baseURL: URL(string: "https://example.com")!, apiKey: "key"),
+            configuration: AppConfiguration(
+                baseURL: URL(string: "https://example.com")!,
+                auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+                notesync: .init(apiKey: "key")
+            ),
             tokenStore: tokenStore,
             session: URLSessionMock()
         )
@@ -695,7 +989,7 @@ git commit -m "feat: add notesync manager"
 
 ---
 
-### Task 6: Enqueue sync operations on note create/update/delete
+### Task 8: Enqueue sync operations on note create/update/delete
 
 **Files:**
 - Modify: `timeline/Services/NotesRepository.swift`
@@ -781,7 +1075,7 @@ git commit -m "feat: enqueue sync ops on note changes"
 
 ---
 
-### Task 7: Add manual sync UI
+### Task 9: Add manual sync UI (gated by login)
 
 **Files:**
 - Modify: `timeline/Views/TimelineView.swift`
@@ -832,14 +1126,19 @@ final class NotesyncUIState: ObservableObject {
 ```swift
 // timeline/Views/TimelineView.swift (add sync button)
 @EnvironmentObject private var syncState: NotesyncUIState
+@EnvironmentObject private var authSession: AuthSessionManager
 @State private var isShowingSyncError = false
 private let syncQueue = try! SyncQueue()
 private let tokenStore = KeychainAuthTokenStore()
-private var syncManager: NotesyncManager {
-    let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "replace-me")
-    let client = NotesyncClient(configuration: config, tokenStore: tokenStore)
-    return NotesyncManager(queue: syncQueue, client: client)
-}
+    private var syncManager: NotesyncManager {
+        let config = AppConfiguration(
+            baseURL: URL(string: "https://example.com")!,
+            auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+            notesync: .init(apiKey: "replace-me")
+        )
+        let client = NotesyncClient(configuration: config, tokenStore: tokenStore)
+        return NotesyncManager(queue: syncQueue, client: client)
+    }
 
 ToolbarItem(placement: .topBarTrailing) {
     Button {
@@ -849,7 +1148,7 @@ ToolbarItem(placement: .topBarTrailing) {
     } label: {
         Label("Sync", systemImage: "arrow.triangle.2.circlepath")
     }
-    .disabled(syncState.isSyncing)
+    .disabled(syncState.isSyncing || !authSession.isSignedIn)
 }
 
 private func syncNow() async {
@@ -879,7 +1178,7 @@ git commit -m "feat: add manual sync UI state and button"
 
 ---
 
-### Task 8: Document notesync configuration
+### Task 10: Document notesync configuration
 
 **Files:**
 - Modify: `README.md`
@@ -910,8 +1209,11 @@ Expected: FAIL
 ## Notesync (Manual Sync)
 - Endpoint: `POST /api/notesync`
 - Headers: `X-API-Key: <your-key>`, `Authorization: Bearer <jwt>`
-- Store the JWT in `KeychainAuthTokenStore` after OAuth login.
-- Update `NotesyncConfiguration` in `timeline/Views/TimelineView.swift` with your backend base URL and API key.
+- Login URL: `https://zzuse.duckdns.org/login` (opens in external browser).
+- OAuth callback: `https://zzuse.duckdns.org/auth/callback?code=...`
+- Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
+- Store the JWT in `KeychainAuthTokenStore` after code exchange.
+- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL and API key.
 ```
 
 **Step 4: Run test to verify it passes**

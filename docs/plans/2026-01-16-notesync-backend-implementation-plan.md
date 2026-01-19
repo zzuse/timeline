@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build a Flask + PostgreSQL backend that accepts offline sync bundles from the iOS app at `POST /api/notesync`, using API key auth + user JWT auth with last-write-wins conflict handling for notes, tags, and media.
+**Goal:** Build a Flask + PostgreSQL backend that accepts offline sync bundles from the iOS app at `POST /api/notesync`, using API key auth + user JWT auth with last-write-wins conflict handling for notes, tags, and media, plus an auth code exchange endpoint for OAuth callbacks.
 
-**Architecture:** A single Flask app with SQLAlchemy models for notes, tags, media, and sync metadata. The `/api/notesync` endpoint authenticates the app via API key and the user via JWT, scopes all data by user id, applies operations transactionally with LWW semantics, stores media blobs in PostgreSQL, and returns authoritative note states.
+**Architecture:** A single Flask app with SQLAlchemy models for notes, tags, media, and sync metadata. The `/api/notesync` endpoint authenticates the app via API key and the user via JWT, scopes all data by user id, applies operations transactionally with LWW semantics, stores media blobs in PostgreSQL, and returns authoritative note states. A separate `/api/auth/exchange` endpoint exchanges short-lived OAuth codes for JWTs.
 
 **Tech Stack:** Python 3.11, Flask, SQLAlchemy, Alembic, psycopg (or psycopg2), Pydantic, PyJWT, pytest.
 
@@ -405,7 +405,85 @@ git commit -m "feat: enforce API key auth"
 
 ---
 
-### Task 5: Implement `/api/notesync` LWW sync logic
+### Task 5: Add auth code exchange endpoint
+
+**Files:**
+- Create: `backend/auth_codes.py`
+- Modify: `backend/app.py`
+- Create: `backend/tests/test_auth_exchange.py`
+
+**Step 1: Write the failing test**
+
+```python
+# backend/tests/test_auth_exchange.py
+from backend.app import create_app
+
+def test_exchange_requires_code():
+    app = create_app()
+    client = app.test_client()
+    resp = client.post("/api/auth/exchange", json={})
+    assert resp.status_code == 400
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `pytest backend/tests/test_auth_exchange.py::test_exchange_requires_code -v`  
+Expected: FAIL with 404 or missing handler.
+
+**Step 3: Write minimal implementation**
+
+```python
+# backend/auth_codes.py
+from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+
+@dataclass
+class AuthCode:
+    code: str
+    user_id: str
+    expires_at: datetime
+    used_at: datetime | None = None
+
+def is_valid(code: AuthCode) -> bool:
+    now = datetime.now(timezone.utc)
+    return code.used_at is None and code.expires_at > now
+```
+
+```python
+# backend/app.py (add endpoint)
+from flask import request, jsonify
+
+@app.post("/api/auth/exchange")
+def auth_exchange():
+    payload = request.get_json(silent=True) or {}
+    code = payload.get("code")
+    if not code:
+        return jsonify({"error": "invalid_code"}), 400
+    # TODO: look up code in DB, validate, mark used
+    # TODO: issue JWT + optional refresh token
+    return jsonify({
+        "access_token": "jwt",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "user": {"id": "user-id"}
+    })
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `pytest backend/tests/test_auth_exchange.py::test_exchange_requires_code -v`  
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add backend/auth_codes.py backend/app.py backend/tests/test_auth_exchange.py
+git commit -m "feat: add auth code exchange endpoint"
+```
+
+---
+
+### Task 6: Implement `/api/notesync` LWW sync logic
 
 **Files:**
 - Modify: `backend/app.py`
@@ -588,7 +666,7 @@ git commit -m "feat: implement notesync LWW endpoint"
 
 ---
 
-### Task 6: Add Alembic migrations + DB setup docs
+### Task 7: Add Alembic migrations + DB setup docs
 
 **Files:**
 - Create: `backend/alembic.ini`
@@ -714,6 +792,57 @@ def upgrade():
 
 ### Endpoint
 `POST /api/notesync` with headers `X-API-Key` and `Authorization: Bearer <jwt>`.
+`POST /api/auth/exchange` with JSON body `{ "code": "..." }`.
+
+### Apple Universal Links (iOS)
+Host the Apple App Site Association file at:
+```
+https://zzuse.duckdns.org/.well-known/apple-app-site-association
+```
+
+Example AASA:
+```json
+{
+  "applinks": {
+    "apps": [],
+    "details": [{
+      "appID": "<TEAM_ID>.zzuse.timeline",
+      "paths": ["/auth/callback*"]
+    }]
+  }
+}
+```
+
+Notes:
+- Replace `<TEAM_ID>` with your Apple Team ID.
+- Ensure the response is `application/json` (no `.json` extension).
+
+### Android App Links (Optional)
+Use the same callback URL (`https://zzuse.duckdns.org/auth/callback`) and add Android App Links by hosting:
+```
+https://zzuse.duckdns.org/.well-known/assetlinks.json
+```
+
+Example `assetlinks.json`:
+```json
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "<ANDROID_PACKAGE_NAME>",
+      "sha256_cert_fingerprints": [
+        "<SHA256_CERT_FINGERPRINT>"
+      ]
+    }
+  }
+]
+```
+
+Notes:
+- Replace `<ANDROID_PACKAGE_NAME>` with your Android package name.
+- Replace `<SHA256_CERT_FINGERPRINT>` with the SHA-256 cert fingerprint of your signing key.
+- iOS still uses `apple-app-site-association`; Android uses `assetlinks.json`.
 ```
 
 **Step 4: Run test to verify it passes**
@@ -730,7 +859,7 @@ git commit -m "chore: add migrations and backend docs"
 
 ---
 
-### Task 7: Expand tests for LWW and delete propagation
+### Task 8: Expand tests for LWW and delete propagation
 
 **Files:**
 - Modify: `backend/tests/test_notesync.py`
@@ -774,7 +903,7 @@ git commit -m "test: cover LWW and deletes"
 
 ---
 
-### Task 8: Document request/response contract
+### Task 9: Document request/response contract
 
 **Files:**
 - Modify: `backend/README.md`

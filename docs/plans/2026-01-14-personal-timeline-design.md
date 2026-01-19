@@ -1,26 +1,28 @@
 # Personal Timeline Notes (iOS) - Design
 
 ## Overview
-Build a local-only personal timeline notes app for iOS 17+ using SwiftUI + SwiftData. Users can post short notes with images and tags, browse a timeline, search/filter by text and tags, and edit/delete/pin notes. Images are stored on disk; SwiftData stores metadata and paths.
+Build a local-first personal timeline notes app for iOS 17+ using SwiftUI + SwiftData. Users can post short notes with images, audio clips, and tags, browse a timeline, search/filter by text and tags, and edit/delete/pin notes. Images and audio are stored on disk; SwiftData stores metadata and paths. Optional manual sync uploads notes to a backend when the user signs in.
 
 ## Goals
 - Post short notes with images (camera + photo library), audio clips, and tags.
 - Timeline browsing with pinned-first ordering, then creation time descending.
 - Search by text and filter by tags.
 - Edit, delete, and pin/unpin notes.
-- Pure local storage; no network.
+- Local-first storage with optional manual sync.
 
 ## Non-Goals (MVP)
-- Remote sync or accounts.
 - Rich text, mentions, or comments.
 - Tag management screen beyond autocomplete.
+### Deferred
+- Background or automatic sync.
+- Multi-device conflict resolution beyond last-write-wins.
 
 ## Architecture
-- SwiftUI views for timeline, detail, compose/edit, and search/filter.
-- SwiftData models for Note and Tag.
+- SwiftUI views for timeline, detail, compose/edit, search/filter, and a login entry point.
+- SwiftData models for Note and Tag; local file stores for images/audio.
 - ImageStore writes compressed JPEG files to Documents/Images and returns relative paths.
 - NotesRepository coordinates SwiftData CRUD and ImageStore file operations.
-- Simple in-memory caching (NSCache) for image loading.
+- File-based sync queue and manual sync action when authenticated.
 
 ## Data Model
 Note
@@ -50,6 +52,9 @@ Tag
 Create/Edit:
 - User picks images -> ImageStore compresses and saves -> returns paths.
 - NotesRepository normalizes tags, updates updatedAt, persists Note via SwiftData.
+Sync (manual):
+- User signs in via external browser; app receives universal link callback and stores JWT.
+- User taps Sync; queued changes upload to backend using API key + JWT.
 
 Delete:
 - Repository deletes Note from SwiftData, removes associated image files.
