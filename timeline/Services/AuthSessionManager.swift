@@ -15,7 +15,7 @@ final class AuthSessionManager: ObservableObject {
     ) {
         self.tokenStore = tokenStore
         self.exchangeClient = exchangeClient
-        self.handler = AuthLinkHandler(baseURL: AppConfiguration.default.baseURL)
+        self.handler = AuthLinkHandler(configuration: AppConfiguration.default.auth)
         self.isSignedIn = (try? tokenStore.loadToken()) != nil
     }
 

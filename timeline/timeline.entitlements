@@ -6,9 +6,5 @@
     <true/>
     <key>com.apple.security.files.user-selected.read-only</key>
     <true/>
-    <key>com.apple.developer.associated-domains</key>
-    <array>
-        <string>applinks:zzuse.duckdns.org</string>
-    </array>
 </dict>
 </plist>

@@ -14,7 +14,13 @@ struct NotesyncManagerTests {
         let client = NotesyncClient(
             configuration: AppConfiguration(
                 baseURL: URL(string: "https://example.com")!,
-                auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+                auth: .init(
+                    loginURL: URL(string: "https://example.com/login")!,
+                    apiKey: "unused",
+                    callbackScheme: "zzuse.timeline",
+                    callbackHost: "auth",
+                    callbackPath: "/callback"
+                ),
                 notesync: .init(apiKey: "key")
             ),
             tokenStore: tokenStore,

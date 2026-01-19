@@ -4,6 +4,9 @@ struct AppConfiguration {
     struct Auth {
         let loginURL: URL
         let apiKey: String
+        let callbackScheme: String
+        let callbackHost: String
+        let callbackPath: String
     }
 
     struct Notesync {
@@ -18,7 +21,10 @@ struct AppConfiguration {
         baseURL: URL(string: "https://zzuse.duckdns.org")!,
         auth: Auth(
             loginURL: URL(string: "https://zzuse.duckdns.org/login")!,
-            apiKey: "replace-me"
+            apiKey: "replace-me",
+            callbackScheme: "zzuse.timeline",
+            callbackHost: "auth",
+            callbackPath: "/callback"
         ),
         notesync: Notesync(apiKey: "replace-me")
     )

@@ -8,6 +8,9 @@ struct AppConfigurationTests {
         #expect(config.baseURL.absoluteString == "https://zzuse.duckdns.org")
         #expect(config.auth.loginURL.absoluteString == "https://zzuse.duckdns.org/login")
         #expect(config.auth.apiKey == "replace-me")
+        #expect(config.auth.callbackScheme == "zzuse.timeline")
+        #expect(config.auth.callbackHost == "auth")
+        #expect(config.auth.callbackPath == "/callback")
         #expect(config.notesync.apiKey == "replace-me")
     }
 }
