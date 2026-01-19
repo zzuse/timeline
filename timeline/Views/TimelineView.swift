@@ -5,6 +5,7 @@ struct TimelineView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var notes: [Note]
     @EnvironmentObject private var syncState: NotesyncUIState
+    @EnvironmentObject private var authSession: AuthSessionManager
 
     @State private var isShowingCompose = false
     @State private var isShowingFilters = false
@@ -21,7 +22,7 @@ struct TimelineView: View {
     private let tokenStore = KeychainAuthTokenStore()
 
     private var syncManager: NotesyncManager {
-        let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "replace-me")
+        let config = NotesyncConfigurationProvider.defaultConfiguration
         let client = NotesyncClient(configuration: config, tokenStore: tokenStore)
         return NotesyncManager(queue: syncQueue, client: client)
     }
@@ -135,7 +136,7 @@ struct TimelineView: View {
                 } label: {
                     Label("Sync", systemImage: "arrow.triangle.2.circlepath")
                 }
-                .disabled(syncState.isSyncing)
+                .disabled(syncState.isSyncDisabled(isSignedIn: authSession.isSignedIn))
             }
             ToolbarItem(placement: .topBarLeading) {
                 Button {

@@ -41,5 +41,8 @@ xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhon
 ## Notesync (Manual Sync)
 - Endpoint: `POST /api/notesync`
 - Headers: `X-API-Key: <your-key>`, `Authorization: Bearer <jwt>`
-- Store the JWT in `KeychainAuthTokenStore` after OAuth login.
-- Update `NotesyncConfiguration` in `timeline/Views/TimelineView.swift` with your backend base URL and API key.
+- Login URL: `https://zzuse.duckdns.org/login` (opens in external browser).
+- OAuth callback: `https://zzuse.duckdns.org/auth/callback?code=...`
+- Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
+- Store the JWT in `KeychainAuthTokenStore` after code exchange.
+- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL and API key.

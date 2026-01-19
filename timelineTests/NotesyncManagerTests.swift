@@ -12,7 +12,11 @@ struct NotesyncManagerTests {
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveToken("jwt-token")
         let client = NotesyncClient(
-            configuration: .init(baseURL: URL(string: "https://example.com")!, apiKey: "key"),
+            configuration: AppConfiguration(
+                baseURL: URL(string: "https://example.com")!,
+                auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+                notesync: .init(apiKey: "key")
+            ),
             tokenStore: tokenStore,
             session: NotesyncSessionStub()
         )

@@ -4,7 +4,11 @@ import Testing
 
 struct NotesyncClientTests {
     @Test func clientSendsAuthHeaders() async throws {
-        let config = NotesyncConfiguration(baseURL: URL(string: "https://example.com")!, apiKey: "key")
+        let config = AppConfiguration(
+            baseURL: URL(string: "https://example.com")!,
+            auth: .init(loginURL: URL(string: "https://example.com/login")!, apiKey: "unused"),
+            notesync: .init(apiKey: "key")
+        )
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveToken("jwt-token")
         let session = NotesyncSessionMock()
