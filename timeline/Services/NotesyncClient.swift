@@ -6,19 +6,14 @@ protocol NotesyncSession {
 
 extension URLSession: NotesyncSession {}
 
-struct NotesyncConfiguration {
-    let baseURL: URL
-    let apiKey: String
-}
-
 final class NotesyncClient {
-    private let configuration: NotesyncConfiguration
+    private let configuration: AppConfiguration
     private let tokenStore: AuthTokenStore
     private let session: NotesyncSession
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    init(configuration: NotesyncConfiguration, tokenStore: AuthTokenStore, session: NotesyncSession = URLSession.shared) {
+    init(configuration: AppConfiguration, tokenStore: AuthTokenStore, session: NotesyncSession = URLSession.shared) {
         self.configuration = configuration
         self.tokenStore = tokenStore
         self.session = session
@@ -32,7 +27,7 @@ final class NotesyncClient {
         var request = URLRequest(url: configuration.baseURL.appendingPathComponent("/api/notesync"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(configuration.apiKey, forHTTPHeaderField: "X-API-Key")
+        request.setValue(configuration.notesync.apiKey, forHTTPHeaderField: "X-API-Key")
         let token = try tokenStore.loadToken()
         guard let token else { throw URLError(.userAuthenticationRequired) }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
