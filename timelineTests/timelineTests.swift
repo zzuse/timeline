@@ -73,6 +73,40 @@ struct timelineTests {
         #expect((try queue.pending()).count == 1)
     }
 
+    @Test func repositoryUpdateDoesNotRequeueExistingMedia() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let queue = try SyncQueue(baseURL: temp)
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore(), syncQueue: queue)
+        let imagesURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Images", isDirectory: true)
+        try FileManager.default.createDirectory(at: imagesURL, withIntermediateDirectories: true)
+        let filename = "test-image-\(UUID().uuidString).jpg"
+        let fileURL = imagesURL.appendingPathComponent(filename)
+        try Data("img".utf8).write(to: fileURL, options: .atomic)
+
+        let note = Note(text: "Hello", imagePaths: [filename], tags: [])
+        context.insert(note)
+        try context.save()
+
+        try repo.update(
+            note: note,
+            text: "Hello updated",
+            images: [],
+            removedPaths: [],
+            audioPaths: [],
+            removedAudioPaths: [],
+            tagInput: [],
+            isPinned: false
+        )
+
+        let items = try queue.pending().filter { $0.opType == .update }
+        #expect(items.count == 1)
+        #expect(items[0].media.isEmpty)
+    }
+
     @Test func noteSorterPinnedFirst() async throws {
         let pinned = Note(text: "Pinned", imagePaths: [], tags: [])
         pinned.isPinned = true

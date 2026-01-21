@@ -62,8 +62,8 @@ final class NotesRepository: NotesRepositoryType {
         try context.save()
         try syncQueue.enqueueUpdate(
             note: note,
-            imagePaths: note.imagePaths,
-            audioPaths: note.audioPaths,
+            imagePaths: newPaths,
+            audioPaths: audioPaths,
             tags: note.tags.map(\.name)
         )
     }

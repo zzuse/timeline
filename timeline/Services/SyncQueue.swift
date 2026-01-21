@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum SyncOpType: String, Codable {
@@ -165,6 +166,7 @@ final class SyncQueue {
 
     private func sha256(for url: URL) throws -> String {
         let data = try Data(contentsOf: url)
-        return data.base64EncodedString()
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
