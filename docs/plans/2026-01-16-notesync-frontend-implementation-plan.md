@@ -4,7 +4,7 @@
 
 **Goal:** Add manual, offline-first note syncing to the iOS app with a file-based queue and a `POST /api/notesync` upload flow using API key auth plus user JWT auth.
 
-**Architecture:** The app remains local-first with SwiftData as the source of truth. A new file-based sync queue stores note create/update/delete operations plus copied media. A sync manager builds a request payload from queued ops and uploads it to `/api/notesync` using an app API key and the user JWT from secure storage, then clears successful queue items. Authentication uses an external browser login, universal-link callback, code exchange, and JWT persistence in Keychain.
+**Architecture:** The app remains local-first with SwiftData as the source of truth. A new file-based sync queue stores note create/update/delete operations plus copied media. A sync manager builds request payloads from queued ops and uploads them to `/api/notesync` using an app API key and the user JWT from secure storage, then clears successful queue items. Sync uploads are batched to stay under a 10 MB request limit. Authentication uses an external browser login, custom URL scheme callback, code exchange, and JWT persistence in Keychain, with access + refresh tokens returned during code exchange and a future refresh flow at `POST /auth/refresh`.
 
 **Tech Stack:** SwiftUI, SwiftData, URLSession, Foundation Codable, Security (Keychain), AuthenticationServices, Testing (swift-testing).
 
@@ -422,6 +422,9 @@ struct AppConfigurationTests {
         let config = AppConfiguration.default
         #expect(config.baseURL.absoluteString == "https://zzuse.duckdns.org")
         #expect(config.auth.loginURL.absoluteString == "https://zzuse.duckdns.org/login")
+        #expect(config.auth.callbackScheme == "zzuse.timeline")
+        #expect(config.auth.callbackHost == "auth")
+        #expect(config.auth.callbackPath == "/callback")
         #expect(config.auth.apiKey == "replace-me")
         #expect(config.notesync.apiKey == "replace-me")
     }
@@ -443,6 +446,9 @@ struct AppConfiguration {
     struct Auth {
         let loginURL: URL
         let apiKey: String
+        let callbackScheme: String
+        let callbackHost: String
+        let callbackPath: String
     }
 
     struct Notesync {
@@ -457,7 +463,10 @@ struct AppConfiguration {
         baseURL: URL(string: "https://zzuse.duckdns.org")!,
         auth: Auth(
             loginURL: URL(string: "https://zzuse.duckdns.org/login")!,
-            apiKey: "replace-me"
+            apiKey: "replace-me",
+            callbackScheme: "zzuse.timeline",
+            callbackHost: "auth",
+            callbackPath: "/callback"
         ),
         notesync: Notesync(apiKey: "replace-me")
     )
@@ -478,7 +487,7 @@ git commit -m "feat: add app configuration defaults"
 
 ---
 
-### Task 5: Add login flow with external browser + universal link callback
+### Task 5: Add login flow with external browser + custom URL scheme callback
 
 **Files:**
 - Modify: `timeline/timeline.entitlements`
@@ -500,8 +509,8 @@ import Testing
 
 struct AuthLinkHandlerTests {
     @Test func authCallbackParsesCode() async throws {
-        let handler = AuthLinkHandler()
-        let url = URL(string: "https://zzuse.duckdns.org/auth/callback?code=abc123")!
+        let handler = AuthLinkHandler(configuration: AppConfiguration.default.auth)
+        let url = URL(string: "zzuse.timeline://auth/callback?code=abc123")!
         let result = handler.parseCallback(url: url)
         #expect(result?.code == "abc123")
     }
@@ -524,7 +533,7 @@ struct AuthSessionManagerTests {
     @Test func savesTokenAfterExchange() async throws {
         let store = InMemoryAuthTokenStore()
         let manager = AuthSessionManager(tokenStore: store, exchangeClient: AuthExchangeStub())
-        let url = URL(string: "https://zzuse.duckdns.org/auth/callback?code=abc123")!
+        let url = URL(string: "zzuse.timeline://auth/callback?code=abc123")!
         await manager.handleCallback(url: url)
         #expect(try store.loadToken() == "jwt")
     }
@@ -539,12 +548,16 @@ Expected: FAIL with missing types.
 **Step 3: Write minimal implementation**
 
 ```swift
-// timeline/timeline.entitlements
-// Add:
-// <key>com.apple.developer.associated-domains</key>
-// <array>
-//   <string>applinks:zzuse.duckdns.org</string>
-// </array>
+// timeline.xcodeproj/project.pbxproj
+// Add to build settings:
+// INFOPLIST_KEY_CFBundleURLTypes = (
+//   {
+//     CFBundleURLName = "zzuse.timeline";
+//     CFBundleURLSchemes = (
+//       "zzuse.timeline",
+//     );
+//   },
+// );
 ```
 
 ```swift
@@ -557,9 +570,20 @@ struct AuthCallbackResult {
 }
 
 struct AuthLinkHandler {
+    private let allowedScheme: String
+    private let allowedHost: String
+    private let allowedPath: String
+
+    init(configuration: AppConfiguration.Auth) {
+        self.allowedScheme = configuration.callbackScheme
+        self.allowedHost = configuration.callbackHost
+        self.allowedPath = configuration.callbackPath
+    }
+
     func parseCallback(url: URL) -> AuthCallbackResult? {
-        guard url.host == "zzuse.duckdns.org",
-              url.path == "/auth/callback",
+        guard url.scheme == allowedScheme,
+              url.host == allowedHost,
+              url.path == allowedPath,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let code = components.queryItems?.first(where: { $0.name == "code" })?.value
         else { return nil }
@@ -636,6 +660,7 @@ final class AuthSessionManager: ObservableObject {
     ) {
         self.tokenStore = tokenStore
         self.exchangeClient = exchangeClient
+        self.handler = AuthLinkHandler(configuration: AppConfiguration.default.auth)
         self.isSignedIn = (try? tokenStore.loadToken()) != nil
     }
 
@@ -689,7 +714,7 @@ Expected: PASS
 
 ```bash
 git add timeline/timeline.entitlements timeline/ContentView.swift timeline/Services/AuthLinkHandler.swift timeline/Services/AuthExchangeClient.swift timeline/Services/AuthSessionManager.swift timeline/Views/LoginView.swift timelineTests/AuthLinkHandlerTests.swift timelineTests/AuthSessionManagerTests.swift
-git commit -m "feat: add universal link login scaffolding"
+git commit -m "feat: add custom scheme login scaffolding"
 ```
 
 ---
@@ -1210,8 +1235,11 @@ Expected: FAIL
 - Endpoint: `POST /api/notesync`
 - Headers: `X-API-Key: <your-key>`, `Authorization: Bearer <jwt>`
 - Login URL: `https://zzuse.duckdns.org/login` (opens in external browser).
-- OAuth callback: `https://zzuse.duckdns.org/auth/callback?code=...`
+- OAuth callback: `zzuse.timeline://auth/callback?code=...`
 - Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
+- Refresh: `POST /auth/refresh` with the refresh token to get new tokens.
+- Access + refresh tokens are returned during code exchange and stored in `KeychainAuthTokenStore`.
+- Max request size: 10 MB. Client batches sync uploads to stay under the limit.
 - Store the JWT in `KeychainAuthTokenStore` after code exchange.
 - Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL and API key.
 ```
@@ -1226,6 +1254,244 @@ Expected: PASS
 ```bash
 git add README.md timelineTests/NotesyncDocsTests.swift
 git commit -m "docs: add notesync configuration info"
+```
+
+---
+
+### Task 11: Add notesync batching for the 10 MB request limit
+
+**Files:**
+- Modify: `timeline/Services/AppConfiguration.swift`
+- Create: `timeline/Services/NotesyncBatcher.swift`
+- Modify: `timeline/Services/NotesyncManager.swift`
+- Create: `timelineTests/NotesyncBatcherTests.swift`
+
+**Step 1: Write the failing test**
+
+```swift
+// timelineTests/NotesyncBatcherTests.swift
+import Foundation
+import Testing
+
+struct NotesyncBatcherTests {
+    @Test func batcherSplitsOpsUnderLimit() async throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let batcher = NotesyncBatcher(maxBytes: 512 * 1024, encoder: encoder)
+        let note = SyncNotePayload(
+            id: "n1",
+            text: "hello",
+            isPinned: false,
+            tags: [],
+            createdAt: Date(),
+            updatedAt: Date(),
+            deletedAt: nil
+        )
+        let media = SyncMediaPayload(
+            id: "m1",
+            noteId: "n1",
+            kind: "image",
+            filename: "1.jpg",
+            contentType: "image/jpeg",
+            checksum: "sum",
+            dataBase64: String(repeating: "a", count: 400_000)
+        )
+        let ops = [
+            SyncOperationPayload(opId: "o1", opType: "create", note: note, media: [media]),
+            SyncOperationPayload(opId: "o2", opType: "create", note: note, media: [media]),
+            SyncOperationPayload(opId: "o3", opType: "create", note: note, media: [media])
+        ]
+
+        let batches = try batcher.split(ops: ops)
+        #expect(batches.count > 1)
+    }
+}
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/NotesyncBatcherTests.batcherSplitsOpsUnderLimit`  
+Expected: FAIL with missing `NotesyncBatcher`.
+
+**Step 3: Write minimal implementation**
+
+```swift
+// timeline/Services/NotesyncBatcher.swift
+import Foundation
+
+enum NotesyncBatchingError: Error {
+    case opTooLarge
+}
+
+struct NotesyncBatcher {
+    let maxBytes: Int
+    let encoder: JSONEncoder
+
+    func split(ops: [SyncOperationPayload]) throws -> [[SyncOperationPayload]] {
+        var batches: [[SyncOperationPayload]] = []
+        var current: [SyncOperationPayload] = []
+        for op in ops {
+            let candidate = current + [op]
+            let size = try encoder.encode(SyncRequest(ops: candidate)).count
+            if size <= maxBytes {
+                current = candidate
+                continue
+            }
+            if current.isEmpty {
+                throw NotesyncBatchingError.opTooLarge
+            }
+            batches.append(current)
+            current = [op]
+        }
+        if !current.isEmpty {
+            batches.append(current)
+        }
+        return batches
+    }
+}
+```
+
+Update configuration:
+
+```swift
+// timeline/Services/AppConfiguration.swift
+struct Notesync {
+    let apiKey: String
+    let maxRequestBytes: Int
+}
+
+static let `default` = AppConfiguration(
+    // ...
+    notesync: Notesync(apiKey: "replace-me", maxRequestBytes: 10 * 1024 * 1024)
+)
+```
+
+Update `NotesyncManager.performSync()` to batch ops before sending:
+
+```swift
+let ops = try buildPayload(from: pending).ops
+let batcher = NotesyncBatcher(maxBytes: configuration.notesync.maxRequestBytes, encoder: encoder)
+for batch in try batcher.split(ops: ops) {
+    _ = try await client.send(payload: SyncRequest(ops: batch))
+}
+try queue.remove(items: pending)
+```
+
+**Step 4: Run test to verify it passes**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/NotesyncBatcherTests.batcherSplitsOpsUnderLimit`  
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add timeline/Services/AppConfiguration.swift timeline/Services/NotesyncBatcher.swift timeline/Services/NotesyncManager.swift timelineTests/NotesyncBatcherTests.swift
+git commit -m "feat: batch notesync requests under 10mb limit"
+```
+
+---
+
+### Task 12: Plan refresh token support for `POST /auth/refresh`
+
+**Files:**
+- Modify: `timeline/Services/AuthExchangeClient.swift`
+- Modify: `timeline/Services/AuthTokenStore.swift`
+- Modify: `timeline/Services/AuthSessionManager.swift`
+- Create: `timeline/Services/AuthRefreshClient.swift`
+- Modify: `timelineTests/AuthTokenStoreTests.swift`
+- Modify: `timelineTests/AuthSessionManagerTests.swift`
+
+**Step 1: Write the failing tests**
+
+```swift
+// timelineTests/AuthTokenStoreTests.swift
+@Test func tokenStoreStoresRefreshToken() async throws {
+    let store = KeychainAuthTokenStore()
+    try store.saveTokens(accessToken: "access", refreshToken: "refresh")
+    #expect(try store.loadAccessToken() == "access")
+    #expect(try store.loadRefreshToken() == "refresh")
+}
+```
+
+```swift
+// timelineTests/AuthSessionManagerTests.swift
+@Test func savesAccessAndRefreshAfterExchange() async throws {
+    let store = InMemoryAuthTokenStore()
+    let manager = AuthSessionManager(tokenStore: store, exchangeClient: AuthExchangeStub())
+    let url = URL(string: "zzuse.timeline://auth/callback?code=abc123")!
+    await manager.handleCallback(url: url)
+    #expect(try store.loadAccessToken() == "access")
+    #expect(try store.loadRefreshToken() == "refresh")
+}
+```
+
+**Step 2: Run tests to verify they fail**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthTokenStoreTests.tokenStoreStoresRefreshToken`  
+Expected: FAIL with missing access/refresh APIs.
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthSessionManagerTests.savesAccessAndRefreshAfterExchange`  
+Expected: FAIL with missing refresh token handling.
+
+**Step 3: Write minimal implementation**
+
+```swift
+// timeline/Services/AuthExchangeClient.swift
+struct AuthExchangeResponse: Codable {
+    let accessToken: String
+    let refreshToken: String
+    let tokenType: String
+    let expiresIn: Int
+}
+```
+
+```swift
+// timeline/Services/AuthTokenStore.swift
+protocol AuthTokenStore {
+    func saveTokens(accessToken: String, refreshToken: String) throws
+    func loadAccessToken() throws -> String?
+    func loadRefreshToken() throws -> String?
+    func clearTokens() throws
+}
+```
+
+```swift
+// timeline/Services/AuthRefreshClient.swift
+struct AuthRefreshRequest: Codable {
+    let refreshToken: String
+}
+
+final class AuthRefreshClient {
+    func refresh(baseURL: URL, apiKey: String, refreshToken: String) async throws -> AuthExchangeResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("/auth/refresh"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "X-API-Key")
+        request.httpBody = try JSONEncoder().encode(AuthRefreshRequest(refreshToken: refreshToken))
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return try JSONDecoder().decode(AuthExchangeResponse.self, from: data)
+    }
+}
+```
+
+Update `AuthSessionManager` to save both tokens on code exchange.
+
+**Step 4: Run tests to verify they pass**
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthTokenStoreTests.tokenStoreStoresRefreshToken`  
+Expected: PASS
+
+Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthSessionManagerTests.savesAccessAndRefreshAfterExchange`  
+Expected: PASS
+
+**Step 5: Commit**
+
+```bash
+git add timeline/Services/AuthExchangeClient.swift timeline/Services/AuthTokenStore.swift timeline/Services/AuthSessionManager.swift timeline/Services/AuthRefreshClient.swift timelineTests/AuthTokenStoreTests.swift timelineTests/AuthSessionManagerTests.swift
+git commit -m "feat: store refresh tokens and add refresh client"
 ```
 
 ---
