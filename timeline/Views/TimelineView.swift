@@ -13,6 +13,7 @@ struct TimelineView: View {
     @State private var errorMessage: String?
     @State private var isShowingError = false
     @State private var isShowingSyncError = false
+    @State private var isShowingLogin = false
     @State private var searchText = ""
     @State private var selectedTags: [String] = []
 
@@ -129,6 +130,15 @@ struct TimelineView: View {
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
+                if !authSession.isSignedIn {
+                    Button {
+                        isShowingLogin = true
+                    } label: {
+                        Label("Sign In", systemImage: "person.crop.circle")
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     Task {
                         await syncNow()
@@ -149,6 +159,11 @@ struct TimelineView: View {
         .sheet(isPresented: $isShowingCompose) {
             NavigationStack {
                 ComposeView()
+            }
+        }
+        .sheet(isPresented: $isShowingLogin) {
+            NavigationStack {
+                LoginView()
             }
         }
         .sheet(isPresented: $isShowingFilters) {
@@ -199,7 +214,14 @@ struct TimelineView: View {
             try await syncManager.performSync()
             syncState.lastSyncAt = Date()
         } catch {
-            syncState.lastError = error.localizedDescription
+            if let notesyncError = error as? NotesyncHTTPError,
+               let body = notesyncError.body,
+               body.contains("token_expired") {
+                syncState.lastError = "Session expired. Please sign in again."
+                isShowingLogin = true
+            } else {
+                syncState.lastError = error.localizedDescription
+            }
             isShowingSyncError = true
         }
         syncState.isSyncing = false

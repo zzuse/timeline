@@ -54,9 +54,22 @@
 		FAF69852C8B0D8D5CA773CFE /* timeline/Services/NotesyncConfigurationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/NotesyncConfigurationProvider.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		192E018A2F1E533600F5E980 /* Exceptions for "timeline" folder in "timeline" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 19E3D10D2F18883F00AF3440 /* timeline */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		19E3D1102F18883F00AF3440 /* timeline */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				192E018A2F1E533600F5E980 /* Exceptions for "timeline" folder in "timeline" target */,
+			);
 			path = timeline;
 			sourceTree = "<group>";
 		};
@@ -459,14 +472,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleURLName = "zzuse.timeline";
-						CFBundleURLSchemes = (
-							"zzuse.timeline",
-						);
-					},
-				);
+				INFOPLIST_FILE = timeline/Info.plist;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"zzuse.timeline\";\n    CFBundleURLSchemes =     (\n        \"zzuse.timeline\"\n    );\n}";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Record short audio notes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -507,14 +514,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleURLTypes = (
-					{
-						CFBundleURLName = "zzuse.timeline";
-						CFBundleURLSchemes = (
-							"zzuse.timeline",
-						);
-					},
-				);
+				INFOPLIST_FILE = timeline/Info.plist;
+				INFOPLIST_KEY_CFBundleURLTypes = "{\n    CFBundleURLName = \"zzuse.timeline\";\n    CFBundleURLSchemes =     (\n        \"zzuse.timeline\"\n    );\n}";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Record short audio notes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

@@ -104,3 +104,26 @@ git stash -u
 git pull --ff-only
 git stash pop
 ```
+
+## Simulator OAuth test
+```sh
+xcrun simctl list devices available
+xcrun simctl boot "iPhone 15"
+xcrun simctl listapps booted | rg -i timeline
+open -a Simulator
+xcodebuild clean -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild build -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15'
+# check has the URL types
+plutil -p "/Users/z/Library/Developer/Xcode/DerivedData/timeline-fnasnbeufxvtkaefhcctimlelytw/Build/Products/Debug-iphonesimulator/timeline.app/Info.plist" \
+| rg -n "CFBundleURLTypes|CFBundleURLSchemes"
+# To ensure the URL scheme is included in the generated plist, add it via Xcode’s Info tab (this reliably maps to the generated plist):
+# Target → Info → URL Types → + Identifier: zzuse.timeline + URL Schemes: zzuse.timeline
+# check info.plist configure success
+xcodebuild -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15' -showBuildSettings \
+| rg -n "INFOPLIST_KEY_CFBundleURLTypes|GENERATE_INFOPLIST_FILE|INFOPLIST_FILE"
+# Installed simulator app contains the scheme:
+APP=$(xcrun simctl get_app_container booted zzuse.timeline app)
+plutil -p "$APP/Info.plist" | rg -n "CFBundleURLTypes|CFBundleURLSchemes"
+# Open app
+xcrun simctl openurl booted "zzuse.timeline://auth/callback?code=TEST"
+```

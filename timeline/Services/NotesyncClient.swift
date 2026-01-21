@@ -6,6 +6,18 @@ protocol NotesyncSession {
 
 extension URLSession: NotesyncSession {}
 
+struct NotesyncHTTPError: LocalizedError {
+    let statusCode: Int
+    let body: String?
+
+    var errorDescription: String? {
+        if let body, !body.isEmpty {
+            return "Notesync failed (\(statusCode)): \(body)"
+        }
+        return "Notesync failed with status \(statusCode)."
+    }
+}
+
 final class NotesyncClient {
     private let configuration: AppConfiguration
     private let tokenStore: AuthTokenStore
@@ -31,12 +43,29 @@ final class NotesyncClient {
         let token = try tokenStore.loadToken()
         guard let token else { throw URLError(.userAuthenticationRequired) }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try encoder.encode(payload)
+        let body = try encoder.encode(payload)
+        request.httpBody = body
+        logPayloadStats(payload, bodySize: body.count)
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            if let http = response as? HTTPURLResponse {
+                let body = String(data: data, encoding: .utf8)
+                throw NotesyncHTTPError(statusCode: http.statusCode, body: body)
+            }
             throw URLError(.badServerResponse)
         }
         return try decoder.decode(SyncResponse.self, from: data)
+    }
+
+    private func logPayloadStats(_ payload: SyncRequest, bodySize: Int) {
+        let mediaPayloads = payload.ops.flatMap(\.media)
+        let mediaCount = mediaPayloads.count
+        let mediaBase64Bytes = mediaPayloads.reduce(0) { $0 + $1.dataBase64.utf8.count }
+        print("Notesync payload bytes=\(bodySize), ops=\(payload.ops.count), media=\(mediaCount), mediaBase64Bytes=\(mediaBase64Bytes)")
+        for media in mediaPayloads {
+            let size = media.dataBase64.utf8.count
+            print("Notesync media id=\(media.id) filename=\(media.filename) base64Bytes=\(size)")
+        }
     }
 }

@@ -20,7 +20,7 @@ struct AppConfiguration {
     static let `default` = AppConfiguration(
         baseURL: URL(string: "https://zzuse.duckdns.org")!,
         auth: Auth(
-            loginURL: URL(string: "https://zzuse.duckdns.org/login")!,
+            loginURL: URL(string: "https://zzuse.duckdns.org/auth/oauth_start?client=ios")!,
             apiKey: "replace-me",
             callbackScheme: "zzuse.timeline",
             callbackHost: "auth",

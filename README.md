@@ -45,4 +45,4 @@ xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhon
 - OAuth callback: `zzuse.timeline://auth/callback?code=...`
 - Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
 - Store the JWT in `KeychainAuthTokenStore` after code exchange.
-- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL and API key.
+- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL, API key, and callback scheme/host/path.

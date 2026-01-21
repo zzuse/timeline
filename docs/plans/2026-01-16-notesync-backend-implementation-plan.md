@@ -794,31 +794,40 @@ def upgrade():
 `POST /api/notesync` with headers `X-API-Key` and `Authorization: Bearer <jwt>`.
 `POST /api/auth/exchange` with JSON body `{ "code": "..." }`.
 
-### Apple Universal Links (iOS)
-Host the Apple App Site Association file at:
-```
-https://zzuse.duckdns.org/.well-known/apple-app-site-association
-```
+### Login URL and Callback Contract
+The app opens `AppConfiguration.default.auth.loginURL` in an external browser. This endpoint should **start** the OAuth flow and redirect the user to the provider (Google/GitHub). It is not a JSON API; it should return an HTTP redirect (302/303).
 
-Example AASA:
-```json
-{
-  "applinks": {
-    "apps": [],
-    "details": [{
-      "appID": "<TEAM_ID>.zzuse.timeline",
-      "paths": ["/auth/callback*"]
-    }]
-  }
-}
+**Recommended backend behavior:**
+1. `GET /login` (or your chosen route) generates an OAuth authorization request.
+2. Backend redirects to the provider's authorize URL.
+3. Provider redirects back to your backend callback route (for example `/oauth/callback`) with an authorization `code`.
+4. Backend **creates a short-lived Notesync auth code** (or directly reuses the provider code if you prefer).
+5. Backend redirects the user to the **app callback URL**:
+   ```
+   zzuse.timeline://auth/callback?code=<notesync-auth-code>
+   ```
+
+**Expected return from the login URL:**
+- A browser redirect chain that ends at the app callback URL above.
+- The app receives the callback and calls `POST /api/auth/exchange` with `{ "code": "<notesync-auth-code>" }`.
+- Backend responds with `{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 3600 }`.
+
+**Notes:**
+- `loginURL` can be any backend route (e.g. `/login`, `/oauth/start`, `/auth/login`) as long as it ends with a redirect to the app callback URL.
+- If you change the scheme/host/path, keep `AppConfiguration.default.auth.callbackScheme`, `callbackHost`, and `callbackPath` in sync.
+
+### OAuth Callback (Custom URL Scheme)
+The iOS app uses a custom URL scheme callback instead of Universal Links:
+```
+zzuse.timeline://auth/callback?code=...
 ```
 
 Notes:
-- Replace `<TEAM_ID>` with your Apple Team ID.
-- Ensure the response is `application/json` (no `.json` extension).
+- Register the custom scheme redirect URI in Google/GitHub OAuth settings.
+- No Apple App Site Association file is required for the custom scheme flow.
 
 ### Android App Links (Optional)
-Use the same callback URL (`https://zzuse.duckdns.org/auth/callback`) and add Android App Links by hosting:
+If you later add an Android app, you may still use HTTPS callbacks with Android App Links:
 ```
 https://zzuse.duckdns.org/.well-known/assetlinks.json
 ```
@@ -842,7 +851,6 @@ Example `assetlinks.json`:
 Notes:
 - Replace `<ANDROID_PACKAGE_NAME>` with your Android package name.
 - Replace `<SHA256_CERT_FINGERPRINT>` with the SHA-256 cert fingerprint of your signing key.
-- iOS still uses `apple-app-site-association`; Android uses `assetlinks.json`.
 ```
 
 **Step 4: Run test to verify it passes**

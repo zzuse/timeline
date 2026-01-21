@@ -53,7 +53,7 @@ Create/Edit:
 - User picks images -> ImageStore compresses and saves -> returns paths.
 - NotesRepository normalizes tags, updates updatedAt, persists Note via SwiftData.
 Sync (manual):
-- User signs in via external browser; app receives universal link callback and stores JWT.
+- User signs in via external browser; app receives a custom URL scheme callback and stores JWT.
 - User taps Sync; queued changes upload to backend using API key + JWT.
 
 Delete:
