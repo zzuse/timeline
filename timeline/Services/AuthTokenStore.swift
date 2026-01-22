@@ -2,18 +2,41 @@ import Foundation
 import Security
 
 protocol AuthTokenStore {
-    func saveToken(_ token: String) throws
-    func loadToken() throws -> String?
-    func clearToken() throws
+    func saveTokens(accessToken: String, refreshToken: String) throws
+    func loadAccessToken() throws -> String?
+    func loadRefreshToken() throws -> String?
+    func clearTokens() throws
 }
 
 final class KeychainAuthTokenStore: AuthTokenStore {
-    private let service = "timeline.notesync.jwt"
-    private let account = "user"
+    private let service = "timeline.notesync.tokens"
+    private let accessAccount = "access"
+    private let refreshAccount = "refresh"
 
-    func saveToken(_ token: String) throws {
+    func saveTokens(accessToken: String, refreshToken: String) throws {
+        try clearTokens()
+        try saveToken(accessToken, account: accessAccount)
+        try saveToken(refreshToken, account: refreshAccount)
+    }
+
+    func loadAccessToken() throws -> String? {
+        try loadToken(account: accessAccount)
+    }
+
+    func loadRefreshToken() throws -> String? {
+        try loadToken(account: refreshAccount)
+    }
+
+    func clearTokens() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    private func saveToken(_ token: String, account: String) throws {
         let data = Data(token.utf8)
-        try clearToken()
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -24,7 +47,7 @@ final class KeychainAuthTokenStore: AuthTokenStore {
         guard status == errSecSuccess else { throw NSError(domain: "Keychain", code: Int(status)) }
     }
 
-    func loadToken() throws -> String? {
+    private func loadToken(account: String) throws -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -40,21 +63,22 @@ final class KeychainAuthTokenStore: AuthTokenStore {
         }
         return String(data: data, encoding: .utf8)
     }
-
-    func clearToken() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(query as CFDictionary)
-    }
 }
 
 final class InMemoryAuthTokenStore: AuthTokenStore {
-    private var token: String?
+    private var accessToken: String?
+    private var refreshToken: String?
 
-    func saveToken(_ token: String) throws { self.token = token }
-    func loadToken() throws -> String? { token }
-    func clearToken() throws { token = nil }
+    func saveTokens(accessToken: String, refreshToken: String) throws {
+        self.accessToken = accessToken
+        self.refreshToken = refreshToken
+    }
+
+    func loadAccessToken() throws -> String? { accessToken }
+    func loadRefreshToken() throws -> String? { refreshToken }
+
+    func clearTokens() throws {
+        accessToken = nil
+        refreshToken = nil
+    }
 }

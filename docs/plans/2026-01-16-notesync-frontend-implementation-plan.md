@@ -1234,14 +1234,13 @@ Expected: FAIL
 ## Notesync (Manual Sync)
 - Endpoint: `POST /api/notesync`
 - Headers: `X-API-Key: <your-key>`, `Authorization: Bearer <jwt>`
-- Login URL: `https://zzuse.duckdns.org/login` (opens in external browser).
+- Login URL: `https://zzuse.duckdns.org/auth/oauth_start?client=ios` (opens in external browser).
 - OAuth callback: `zzuse.timeline://auth/callback?code=...`
 - Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
 - Refresh: `POST /auth/refresh` with the refresh token to get new tokens.
 - Access + refresh tokens are returned during code exchange and stored in `KeychainAuthTokenStore`.
 - Max request size: 10 MB. Client batches sync uploads to stay under the limit.
-- Store the JWT in `KeychainAuthTokenStore` after code exchange.
-- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL and API key.
+- Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL, API key, and max request size.
 ```
 
 **Step 4: Run test to verify it passes**
@@ -1370,7 +1369,7 @@ Update `NotesyncManager.performSync()` to batch ops before sending:
 
 ```swift
 let ops = try buildPayload(from: pending).ops
-let batcher = NotesyncBatcher(maxBytes: configuration.notesync.maxRequestBytes, encoder: encoder)
+let batcher = NotesyncBatcher(maxBytes: AppConfiguration.default.notesync.maxRequestBytes, encoder: encoder)
 for batch in try batcher.split(ops: ops) {
     _ = try await client.send(payload: SyncRequest(ops: batch))
 }

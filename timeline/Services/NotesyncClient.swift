@@ -40,7 +40,7 @@ final class NotesyncClient {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(configuration.notesync.apiKey, forHTTPHeaderField: "X-API-Key")
-        let token = try tokenStore.loadToken()
+        let token = try tokenStore.loadAccessToken()
         guard let token else { throw URLError(.userAuthenticationRequired) }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let body = try encoder.encode(payload)

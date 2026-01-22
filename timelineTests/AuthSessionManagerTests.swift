@@ -4,7 +4,7 @@ import Testing
 
 final class AuthExchangeStub: AuthExchangeClientType {
     func exchange(code: String) async throws -> AuthExchangeResponse {
-        AuthExchangeResponse(accessToken: "jwt", tokenType: "Bearer", expiresIn: 3600)
+        AuthExchangeResponse(accessToken: "jwt", refreshToken: "refresh", tokenType: "Bearer", expiresIn: 3600)
     }
 }
 
@@ -12,8 +12,9 @@ struct AuthSessionManagerTests {
     @Test func savesTokenAfterExchange() async throws {
         let store = InMemoryAuthTokenStore()
         let manager = AuthSessionManager(tokenStore: store, exchangeClient: AuthExchangeStub())
-        let url = URL(string: "https://zzuse.duckdns.org/auth/callback?code=abc123")!
+        let url = URL(string: "zzuse.timeline://auth/callback?code=abc123")!
         await manager.handleCallback(url: url)
-        #expect(try store.loadToken() == "jwt")
+        #expect(try store.loadAccessToken() == "jwt")
+        #expect(try store.loadRefreshToken() == "refresh")
     }
 }

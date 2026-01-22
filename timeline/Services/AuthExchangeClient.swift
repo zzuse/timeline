@@ -6,6 +6,7 @@ struct AuthExchangeRequest: Codable {
 
 struct AuthExchangeResponse: Codable {
     let accessToken: String
+    let refreshToken: String
     let tokenType: String
     let expiresIn: Int
 }
