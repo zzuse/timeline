@@ -129,6 +129,7 @@ final class NotesyncClient {
                     )
                     return try await fetchLatestNotes(limit: limit, token: refreshed.accessToken, didRefresh: true)
                 }
+                throw NotesyncHTTPError(statusCode: http.statusCode, body: bodyText)
             }
             throw URLError(.badServerResponse)
         }
