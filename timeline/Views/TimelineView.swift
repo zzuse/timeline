@@ -9,6 +9,7 @@ struct TimelineView: View {
 
     @State private var isShowingCompose = false
     @State private var isShowingFilters = false
+    @State private var isShowingSettings = false
     @State private var editingNote: Note?
     @State private var errorMessage: String?
     @State private var isShowingError = false
@@ -44,11 +45,26 @@ struct TimelineView: View {
     var body: some View {
         Group {
             if notes.isEmpty {
-                ContentUnavailableView(
-                    "No Notes Yet",
-                    systemImage: "square.and.pencil",
-                    description: Text("Create your first note to start the timeline.")
-                )
+                VStack(spacing: 16) {
+                    ContentUnavailableView(
+                        "No Notes Yet",
+                        systemImage: "square.and.pencil",
+                        description: Text("Create your first note to start the timeline.")
+                    )
+                    if authSession.isSignedIn {
+                        Button {
+                            Task {
+                                await restoreLatest()
+                            }
+                        } label: {
+                            Label("Restore latest 10", systemImage: "arrow.clockwise")
+                        }
+                        .disabled(syncState.isRestoreDisabled(isSignedIn: authSession.isSignedIn))
+                    } else {
+                        Text("Sign in to restore.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } else {
                 List {
                     if !pinnedNotes.isEmpty {
@@ -155,6 +171,13 @@ struct TimelineView: View {
                     Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
                 }
             }
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    isShowingSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+            }
         }
         .sheet(isPresented: $isShowingCompose) {
             NavigationStack {
@@ -174,6 +197,21 @@ struct TimelineView: View {
                 EditView(note: note)
             }
         }
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsView(
+                onFullResync: {
+                    Task {
+                        let didEnqueue = await fullResync()
+                        if didEnqueue {
+                            isShowingSettings = false
+                        }
+                    }
+                },
+                onDismiss: {
+                    isShowingSettings = false
+                }
+            )
+        }
         .alert("Something went wrong", isPresented: $isShowingError) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -183,6 +221,14 @@ struct TimelineView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(syncState.lastError ?? "Unable to sync. Please try again.")
+        }
+        .onChange(of: authSession.didSignInSuccessfully) { _, didSignInSuccessfully in
+            guard didSignInSuccessfully else { return }
+            Task {
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                isShowingLogin = false
+                authSession.clearSignInSuccess()
+            }
         }
     }
 
@@ -225,6 +271,33 @@ struct TimelineView: View {
             isShowingSyncError = true
         }
         syncState.isSyncing = false
+    }
+
+    private func fullResync() async -> Bool {
+        do {
+            try repository.enqueueFullResync()
+            await syncNow()
+            return true
+        } catch {
+            showError("Resync failed to enqueue.")
+            return false
+        }
+    }
+
+    private func restoreLatest() async {
+        do {
+            try await syncManager.restoreLatestNotes(limit: 10, repository: repository)
+        } catch {
+            if let notesyncError = error as? NotesyncHTTPError,
+               let body = notesyncError.body,
+               body.contains("token_expired") {
+                syncState.lastError = "Session expired. Please sign in again."
+                isShowingLogin = true
+            } else {
+                syncState.lastError = error.localizedDescription
+            }
+            isShowingSyncError = true
+        }
     }
 
     private func showError(_ message: String) {

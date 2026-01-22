@@ -34,6 +34,24 @@ final class NotesyncManager {
         }
     }
 
+    func restoreLatestNotes(limit: Int, repository: NotesRepository) async throws {
+        let response = try await client.fetchLatestNotes(limit: limit)
+        for note in response.notes {
+            let mediaForNote = response.media.filter { $0.noteId == note.id }
+            let (imagePaths, audioPaths) = try repository.saveRestoreMedia(noteId: note.id, media: mediaForNote)
+            try repository.upsertNote(
+                id: note.id,
+                text: note.text,
+                isPinned: note.isPinned,
+                tags: note.tags,
+                createdAt: note.createdAt,
+                updatedAt: note.updatedAt,
+                imagePaths: imagePaths,
+                audioPaths: audioPaths
+            )
+        }
+    }
+
     private func buildPayload(from items: [SyncQueueItem]) throws -> SyncRequest {
         let ops = try items.map { item -> SyncOperationPayload in
             let media = try item.media.map { media in

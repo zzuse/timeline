@@ -65,6 +65,35 @@ struct NotesyncClientTests {
         #expect(try tokenStore.loadAccessToken() == "new-access")
         #expect(try tokenStore.loadRefreshToken() == "new-refresh")
     }
+
+    @Test func clientFetchesLatestNotes() async throws {
+        let config = AppConfiguration(
+            baseURL: URL(string: "https://example.com")!,
+            auth: .init(
+                loginURL: URL(string: "https://example.com/login")!,
+                apiKey: "unused",
+                callbackScheme: "zzuse.timeline",
+                callbackHost: "auth",
+                callbackPath: "/callback"
+            ),
+            notesync: .init(apiKey: "key", maxRequestBytes: 10 * 1024 * 1024)
+        )
+        let tokenStore = InMemoryAuthTokenStore()
+        try tokenStore.saveTokens(accessToken: "jwt-token", refreshToken: "refresh-token")
+        let session = NotesyncSessionResponseStub(
+            statusCode: 200,
+            body: #"{"notes":[],"media":[]}"#
+        )
+        let client = NotesyncClient(configuration: config, tokenStore: tokenStore, session: session)
+
+        let response = try await client.fetchLatestNotes(limit: 10)
+
+        #expect(session.lastRequest?.url?.absoluteString == "https://example.com/api/notes?limit=10")
+        #expect(session.lastRequest?.value(forHTTPHeaderField: "Authorization") == "Bearer jwt-token")
+        #expect(session.lastRequest?.value(forHTTPHeaderField: "X-API-Key") == "key")
+        #expect(response.notes.isEmpty)
+        #expect(response.media.isEmpty)
+    }
 }
 
 final class NotesyncSessionMock: NotesyncSession {
@@ -98,6 +127,23 @@ final class NotesyncSessionSequence: NotesyncSession {
             : responses.removeFirst()
         let http = HTTPURLResponse(url: request.url!, statusCode: response.statusCode, httpVersion: nil, headerFields: nil)!
         return (response.body.data(using: .utf8) ?? Data(), http)
+    }
+}
+
+final class NotesyncSessionResponseStub: NotesyncSession {
+    let statusCode: Int
+    let body: String
+    var lastRequest: URLRequest?
+
+    init(statusCode: Int, body: String) {
+        self.statusCode = statusCode
+        self.body = body
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        lastRequest = request
+        let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+        return (body.data(using: .utf8) ?? Data(), response)
     }
 }
 

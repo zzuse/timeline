@@ -54,18 +54,18 @@ final class NotesyncClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(configuration.notesync.apiKey, forHTTPHeaderField: "X-API-Key")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let body = try encoder.encode(payload)
-        request.httpBody = body
-        logPayloadStats(payload, bodySize: body.count)
+        let payloadData = try encoder.encode(payload)
+        request.httpBody = payloadData
+        logPayloadStats(payload, bodySize: payloadData.count)
 
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             if let http = response as? HTTPURLResponse {
-                let body = String(data: data, encoding: .utf8)
-                print("Notesync error status=\(http.statusCode) body=\(body ?? "<empty>")")
-                if shouldRefresh(statusCode: http.statusCode, body: body), !didRefresh {
+                let bodyText = String(data: data, encoding: .utf8)
+                print("Notesync error status=\(http.statusCode) body=\(bodyText ?? "<empty>")")
+                if shouldRefresh(statusCode: http.statusCode, body: bodyText), !didRefresh {
                     guard let refreshToken = try tokenStore.loadRefreshToken() else {
-                        throw NotesyncHTTPError(statusCode: http.statusCode, body: body)
+                        throw NotesyncHTTPError(statusCode: http.statusCode, body: bodyText)
                     }
                     let refreshed = try await refreshClient.refresh(
                         baseURL: configuration.baseURL,
@@ -78,7 +78,7 @@ final class NotesyncClient {
                     )
                     return try await send(payload: payload, token: refreshed.accessToken, didRefresh: true)
                 }
-                throw NotesyncHTTPError(statusCode: http.statusCode, body: body)
+                throw NotesyncHTTPError(statusCode: http.statusCode, body: bodyText)
             }
             throw URLError(.badServerResponse)
         }
@@ -90,6 +90,49 @@ final class NotesyncClient {
             return true
         }
         return body?.localizedCaseInsensitiveContains("token_expired") == true
+    }
+
+    func fetchLatestNotes(limit: Int) async throws -> NotesyncRestoreResponse {
+        let token = try tokenStore.loadAccessToken()
+        guard let token else { throw URLError(.userAuthenticationRequired) }
+        return try await fetchLatestNotes(limit: limit, token: token, didRefresh: false)
+    }
+
+    private func fetchLatestNotes(limit: Int, token: String, didRefresh: Bool) async throws -> NotesyncRestoreResponse {
+        var components = URLComponents(
+            url: configuration.baseURL.appendingPathComponent("/api/notes"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [URLQueryItem(name: "limit", value: "\(limit)")]
+        guard let url = components?.url else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(configuration.notesync.apiKey, forHTTPHeaderField: "X-API-Key")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            if let http = response as? HTTPURLResponse {
+                let bodyText = String(data: data, encoding: .utf8)
+                print("Notesync restore error status=\(http.statusCode) body=\(bodyText ?? "<empty>")")
+                if shouldRefresh(statusCode: http.statusCode, body: bodyText), !didRefresh {
+                    guard let refreshToken = try tokenStore.loadRefreshToken() else {
+                        throw NotesyncHTTPError(statusCode: http.statusCode, body: bodyText)
+                    }
+                    let refreshed = try await refreshClient.refresh(
+                        baseURL: configuration.baseURL,
+                        apiKey: configuration.auth.apiKey,
+                        refreshToken: refreshToken
+                    )
+                    try tokenStore.saveTokens(
+                        accessToken: refreshed.accessToken,
+                        refreshToken: refreshed.refreshToken
+                    )
+                    return try await fetchLatestNotes(limit: limit, token: refreshed.accessToken, didRefresh: true)
+                }
+            }
+            throw URLError(.badServerResponse)
+        }
+        return try decoder.decode(NotesyncRestoreResponse.self, from: data)
     }
 
     private func logPayloadStats(_ payload: SyncRequest, bodySize: Int) {

@@ -2,6 +2,7 @@ import Foundation
 
 final class AuthSessionManager: ObservableObject {
     @Published var isSignedIn = false
+    @Published var didSignInSuccessfully = false
     private let tokenStore: AuthTokenStore
     private let handler: AuthLinkHandler
     private let exchangeClient: AuthExchangeClientType
@@ -25,8 +26,20 @@ final class AuthSessionManager: ObservableObject {
             let response = try await exchangeClient.exchange(code: result.code)
             try tokenStore.saveTokens(accessToken: response.accessToken, refreshToken: response.refreshToken)
             isSignedIn = true
+            didSignInSuccessfully = true
         } catch {
             isSignedIn = false
+            didSignInSuccessfully = false
         }
+    }
+
+    func signOut() {
+        try? tokenStore.clearTokens()
+        isSignedIn = false
+        didSignInSuccessfully = false
+    }
+
+    func clearSignInSuccess() {
+        didSignInSuccessfully = false
     }
 }
