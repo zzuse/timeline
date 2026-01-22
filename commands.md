@@ -34,6 +34,14 @@ git merge main
 mkdir -p timeline/Models
 xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/ModelTests
 xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests
+xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' \
+  -only-testing:timelineTests/AuthSessionManagerTests.signOutClearsTokenAndState \
+  -only-testing:timelineTests/AuthSessionManagerTests.signInSetsSuccessFlag \
+  -only-testing:timelineTests/SyncUIStateTests.syncStateStatusStringsFallback \
+  -only-testing:timelineTests/SyncUIStateTests.restoreIsDisabledWhenSignedOut \
+  -only-testing:timelineTests/timelineTests.repositoryFullResyncEnqueuesAllNotes \
+  -only-testing:timelineTests/timelineTests.repositoryUpsertsNotesById \
+  -only-testing:timelineTests/NotesyncClientTests.clientFetchesLatestNotes
 mv timeline/Models/Note.swift timeline/Note.swift
 xcodebuild clean -scheme timeline
 git diff --stat
@@ -44,6 +52,9 @@ git status -sb
 git worktree remove /personal_path/timeline/timeline/.worktrees/timeline-notes
 git branch -d feature/timeline-notes
 git status --porcelain
+# resolve a remote PR conflict
+git fetch origin settings-resync-restore
+git worktree add .worktrees/settings-resync-restore origin/settings-resync-restore
 ```
 ## Install gh for create PR
 ```sh
@@ -103,6 +114,15 @@ git push origin --delete notesync-frontend-impl
 git stash -u
 git pull --ff-only
 git stash pop
+
+# I did a silly stuff, didn't pull from main, but new feature developed, commit met conflict,
+# solve some conflit commit again, then remember need pulled main, rebase, skip the conflict commit.
+git rebase remotes/origin/main
+git add timeline/Services/NotesyncClient.swift timelineTests/NotesyncClientTests.swift
+git rebase --continue
+GIT_EDITOR=true git rebase --continue
+git rebase --skip
+git push --force-with-lease
 ```
 
 ## Simulator OAuth test

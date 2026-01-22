@@ -10,6 +10,31 @@
 
 ---
 
+## Implementation Checklist
+
+- Add Settings sheet entry point (gear icon) and `SettingsView` sheet wiring in `TimelineView`.
+- Add Logout action in Settings that clears tokens and dismisses sheet.
+- Add Full Resync action with confirmation alert and enqueue-all flow.
+- Add Notesync status display (“Last Sync”, “Last Error”) with fallback text.
+- Add empty-state “Restore latest 10” CTA gated by sign-in.
+- Add restore API client + response types (latest notes + media).
+- Add restore upsert into SwiftData, media saving, and partial-failure handling.
+- Add login success UI (success message + auto-dismiss) and `didSignInSuccessfully` state.
+- Add tests for settings visibility, status fallbacks, restore gating, and login success state.
+
+## Test Case Design
+
+- Settings sheet appears from gear icon and includes Account/Sync/Status sections.
+- Logout visible only when signed in; signing out clears tokens and dismisses sheet.
+- Full Resync visible only when signed in; confirmation alert appears; enqueue count equals notes count.
+- Status fields show “Never/None” when nil; formatted dates when set.
+- Empty-state shows “Restore latest 10” only when signed in and notes list empty.
+- Restore uses correct endpoint + headers; upserts notes by id; skips duplicate media by checksum.
+- Restore handles partial media failures without blocking note insertion.
+- Login success flag sets on code exchange; login sheet shows success message then dismisses.
+
+---
+
 ### Task 1: Add sign-out support in AuthSessionManager
 
 **Files:**
