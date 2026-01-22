@@ -35,15 +35,10 @@ struct NotesyncManagerTests {
     @Test func syncRemovesSentBatchOnFailure() async throws {
         let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let queue = try SyncQueue(baseURL: temp)
-        let audioStore = AudioStore()
-        let firstAudio = audioStore.makeRecordingURL()
-        let secondAudio = audioStore.makeRecordingURL()
-        try Data(repeating: 0x1, count: 256).write(to: firstAudio.url)
-        try Data(repeating: 0x2, count: 256).write(to: secondAudio.url)
         let note1 = Note(text: "Hello", imagePaths: [], tags: [])
         let note2 = Note(text: "World", imagePaths: [], tags: [])
-        try queue.enqueueCreate(note: note1, imagePaths: [], audioPaths: [firstAudio.filename], tags: ["work"])
-        try queue.enqueueCreate(note: note2, imagePaths: [], audioPaths: [secondAudio.filename], tags: ["work"])
+        try queue.enqueueCreate(note: note1, imagePaths: [], audioPaths: [], tags: ["work"])
+        try queue.enqueueCreate(note: note2, imagePaths: [], audioPaths: [], tags: ["work"])
 
         let tokenStore = InMemoryAuthTokenStore()
         try tokenStore.saveTokens(accessToken: "jwt-token", refreshToken: "refresh-token")
@@ -54,15 +49,20 @@ struct NotesyncManagerTests {
                     loginURL: URL(string: "https://example.com/login")!,
                     apiKey: "unused",
                     callbackScheme: "zzuse.timeline",
-                    callbackHost: "auth",
-                    callbackPath: "/callback"
-                ),
-                notesync: .init(apiKey: "key", maxRequestBytes: 1200)
+                callbackHost: "auth",
+                callbackPath: "/callback"
             ),
-            tokenStore: tokenStore,
-            session: NotesyncFailingSession()
+            notesync: .init(apiKey: "key", maxRequestBytes: 100_000)
+        ),
+        tokenStore: tokenStore,
+        session: NotesyncFailingSession()
+    )
+        let manager = NotesyncManager(
+            queue: queue,
+            client: client,
+            maxRequestBytes: 100_000,
+            batcher: NotesyncBatcherStub()
         )
-        let manager = NotesyncManager(queue: queue, client: client, maxRequestBytes: 1200)
 
         do {
             try await manager.performSync()
@@ -95,5 +95,12 @@ final class NotesyncFailingSession: NotesyncSession {
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
         let body = #"{"results":[]}"#.data(using: .utf8)!
         return (body, response)
+    }
+}
+
+struct NotesyncBatcherStub: NotesyncBatching {
+    func split(ops: [SyncOperationPayload]) throws -> [[SyncOperationPayload]] {
+        guard ops.count > 1 else { return [ops] }
+        return [[ops[0]], Array(ops.dropFirst())]
     }
 }
