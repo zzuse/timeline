@@ -11,6 +11,7 @@ struct AppConfiguration {
 
     struct Notesync {
         let apiKey: String
+        let maxRequestBytes: Int
     }
 
     let baseURL: URL
@@ -26,6 +27,6 @@ struct AppConfiguration {
             callbackHost: "auth",
             callbackPath: "/callback"
         ),
-        notesync: Notesync(apiKey: "replace-me")
+        notesync: Notesync(apiKey: "replace-me", maxRequestBytes: 10 * 1024 * 1024)
     )
 }

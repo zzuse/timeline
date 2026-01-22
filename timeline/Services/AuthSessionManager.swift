@@ -16,14 +16,14 @@ final class AuthSessionManager: ObservableObject {
         self.tokenStore = tokenStore
         self.exchangeClient = exchangeClient
         self.handler = AuthLinkHandler(configuration: AppConfiguration.default.auth)
-        self.isSignedIn = (try? tokenStore.loadToken()) != nil
+        self.isSignedIn = (try? tokenStore.loadAccessToken()) != nil
     }
 
     func handleCallback(url: URL) async {
         guard let result = handler.parseCallback(url: url) else { return }
         do {
             let response = try await exchangeClient.exchange(code: result.code)
-            try tokenStore.saveToken(response.accessToken)
+            try tokenStore.saveTokens(accessToken: response.accessToken, refreshToken: response.refreshToken)
             isSignedIn = true
         } catch {
             isSignedIn = false

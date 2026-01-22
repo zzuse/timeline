@@ -13,10 +13,10 @@ struct NotesyncClientTests {
                 callbackHost: "auth",
                 callbackPath: "/callback"
             ),
-            notesync: .init(apiKey: "key")
+            notesync: .init(apiKey: "key", maxRequestBytes: 10 * 1024 * 1024)
         )
         let tokenStore = InMemoryAuthTokenStore()
-        try tokenStore.saveToken("jwt-token")
+        try tokenStore.saveTokens(accessToken: "jwt-token", refreshToken: "refresh-token")
         let session = NotesyncSessionMock()
         let client = NotesyncClient(configuration: config, tokenStore: tokenStore, session: session)
 

@@ -9,9 +9,13 @@
 /* Begin PBXBuildFile section */
 		19E3D18E2F18C1BC00AF3440 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 19E3D18D2F18C1BC00AF3440 /* UIKit.framework */; platformFilters = (ios, xros, ); };
 		205C0DD32EB3605DDC201BBB /* timeline/Views/LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41CD80CB5E04328E92AAC38A /* timeline/Views/LoginView.swift */; };
+		A1A922B8AA504A379E2C981D /* timeline/Services/NotesyncAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = B89BDD5C0156413E9A3C09A8 /* timeline/Services/NotesyncAPI.swift */; };
+		AA565B31B5994068A3BF4242 /* timeline/Services/NotesyncBatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01AB1DC23ECA4FCA83AA145F /* timeline/Services/NotesyncBatcher.swift */; };
+		4574DC406B4A4D65993745EE /* timeline/Services/AuthRefreshClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E951FAD961D0403081C5577A /* timeline/Services/AuthRefreshClient.swift */; };
 		5367B9CF994487376DDB7B69 /* timeline/Services/NotesyncConfigurationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAF69852C8B0D8D5CA773CFE /* timeline/Services/NotesyncConfigurationProvider.swift */; };
 		59616087C94DA93C7BF9D76D /* timelineTests/AuthLinkHandlerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 312BED2776B6B68734724C1D /* timelineTests/AuthLinkHandlerTests.swift */; };
 		6170997F4EABF2EBB8864D89 /* timeline/Services/AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22D2CF0FB088215DC305EDE /* timeline/Services/AppConfiguration.swift */; };
+		CF33152451CF46A087A6738B /* timelineTests/NotesyncBatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7226635D85B48C183E1BEA9 /* timelineTests/NotesyncBatcherTests.swift */; };
 		695BA90911380E5950E4B7CB /* timelineTests/NotesyncConfigurationProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBD6638BEEC1D4F1FFD32485 /* timelineTests/NotesyncConfigurationProviderTests.swift */; };
 		7481AB7608C1408DE54DA247 /* timeline/Services/AuthExchangeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91B110355BDAD02B0D82A16 /* timeline/Services/AuthExchangeClient.swift */; };
 		827E03594DCACBC7A3DF91D8 /* timeline/Services/AuthLinkHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74DE0B3D328A3901ECD77C7 /* timeline/Services/AuthLinkHandler.swift */; };
@@ -46,7 +50,11 @@
 		3632B08A0AC2D508FB5C33E2 /* timelineTests/AuthSessionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timelineTests/AuthSessionManagerTests.swift; sourceTree = SOURCE_ROOT; };
 		40866A9F670EADBFB5827341 /* timelineTests/NotesyncDocsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timelineTests/NotesyncDocsTests.swift; sourceTree = SOURCE_ROOT; };
 		41CD80CB5E04328E92AAC38A /* timeline/Views/LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Views/LoginView.swift; sourceTree = SOURCE_ROOT; };
+		01AB1DC23ECA4FCA83AA145F /* timeline/Services/NotesyncBatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/NotesyncBatcher.swift; sourceTree = SOURCE_ROOT; };
 		A91B110355BDAD02B0D82A16 /* timeline/Services/AuthExchangeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/AuthExchangeClient.swift; sourceTree = SOURCE_ROOT; };
+		B89BDD5C0156413E9A3C09A8 /* timeline/Services/NotesyncAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/NotesyncAPI.swift; sourceTree = SOURCE_ROOT; };
+		E951FAD961D0403081C5577A /* timeline/Services/AuthRefreshClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/AuthRefreshClient.swift; sourceTree = SOURCE_ROOT; };
+		C7226635D85B48C183E1BEA9 /* timelineTests/NotesyncBatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timelineTests/NotesyncBatcherTests.swift; sourceTree = SOURCE_ROOT; };
 		D74DE0B3D328A3901ECD77C7 /* timeline/Services/AuthLinkHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/AuthLinkHandler.swift; sourceTree = SOURCE_ROOT; };
 		E22D2CF0FB088215DC305EDE /* timeline/Services/AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timeline/Services/AppConfiguration.swift; sourceTree = SOURCE_ROOT; };
 		EBD6638BEEC1D4F1FFD32485 /* timelineTests/NotesyncConfigurationProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timelineTests/NotesyncConfigurationProviderTests.swift; sourceTree = SOURCE_ROOT; };
@@ -119,10 +127,14 @@
 				A91B110355BDAD02B0D82A16 /* timeline/Services/AuthExchangeClient.swift */,
 				D74DE0B3D328A3901ECD77C7 /* timeline/Services/AuthLinkHandler.swift */,
 				F48EB35039D67FC1DFB7CC08 /* timeline/Services/AuthSessionManager.swift */,
+				E951FAD961D0403081C5577A /* timeline/Services/AuthRefreshClient.swift */,
+				B89BDD5C0156413E9A3C09A8 /* timeline/Services/NotesyncAPI.swift */,
+				01AB1DC23ECA4FCA83AA145F /* timeline/Services/NotesyncBatcher.swift */,
 				FAF69852C8B0D8D5CA773CFE /* timeline/Services/NotesyncConfigurationProvider.swift */,
 				312BED2776B6B68734724C1D /* timelineTests/AuthLinkHandlerTests.swift */,
 				3632B08A0AC2D508FB5C33E2 /* timelineTests/AuthSessionManagerTests.swift */,
 				40866A9F670EADBFB5827341 /* timelineTests/NotesyncDocsTests.swift */,
+				C7226635D85B48C183E1BEA9 /* timelineTests/NotesyncBatcherTests.swift */,
 				EBD6638BEEC1D4F1FFD32485 /* timelineTests/NotesyncConfigurationProviderTests.swift */,
 			);
 			name = "Recovered References";
@@ -304,6 +316,9 @@
 			files = (
 				6170997F4EABF2EBB8864D89 /* timeline/Services/AppConfiguration.swift in Sources */,
 				205C0DD32EB3605DDC201BBB /* timeline/Views/LoginView.swift in Sources */,
+				A1A922B8AA504A379E2C981D /* timeline/Services/NotesyncAPI.swift in Sources */,
+				AA565B31B5994068A3BF4242 /* timeline/Services/NotesyncBatcher.swift in Sources */,
+				4574DC406B4A4D65993745EE /* timeline/Services/AuthRefreshClient.swift in Sources */,
 				7481AB7608C1408DE54DA247 /* timeline/Services/AuthExchangeClient.swift in Sources */,
 				827E03594DCACBC7A3DF91D8 /* timeline/Services/AuthLinkHandler.swift in Sources */,
 				9AAFF4E75C2D531C24302E1E /* timeline/Services/AuthSessionManager.swift in Sources */,
@@ -318,6 +333,7 @@
 				59616087C94DA93C7BF9D76D /* timelineTests/AuthLinkHandlerTests.swift in Sources */,
 				BE86A8257CB94A7A1C18A9F9 /* timelineTests/AuthSessionManagerTests.swift in Sources */,
 				B44E81BB076A12F68A85C4BD /* timelineTests/NotesyncDocsTests.swift in Sources */,
+				CF33152451CF46A087A6738B /* timelineTests/NotesyncBatcherTests.swift in Sources */,
 				695BA90911380E5950E4B7CB /* timelineTests/NotesyncConfigurationProviderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

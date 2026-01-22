@@ -10,19 +10,19 @@ struct NotesyncManagerTests {
         try queue.enqueueCreate(note: note, imagePaths: [], audioPaths: [], tags: ["work"])
 
         let tokenStore = InMemoryAuthTokenStore()
-        try tokenStore.saveToken("jwt-token")
+        try tokenStore.saveTokens(accessToken: "jwt-token", refreshToken: "refresh-token")
         let client = NotesyncClient(
             configuration: AppConfiguration(
                 baseURL: URL(string: "https://example.com")!,
                 auth: .init(
                     loginURL: URL(string: "https://example.com/login")!,
                     apiKey: "unused",
-                    callbackScheme: "zzuse.timeline",
-                    callbackHost: "auth",
-                    callbackPath: "/callback"
-                ),
-                notesync: .init(apiKey: "key")
+                callbackScheme: "zzuse.timeline",
+                callbackHost: "auth",
+                callbackPath: "/callback"
             ),
+            notesync: .init(apiKey: "key", maxRequestBytes: 10 * 1024 * 1024)
+        ),
             tokenStore: tokenStore,
             session: NotesyncSessionStub()
         )

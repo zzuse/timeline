@@ -3,17 +3,30 @@ import Foundation
 final class NotesyncManager {
     private let queue: SyncQueue
     private let client: NotesyncClient
+    private let maxRequestBytes: Int
+    private let encoder: JSONEncoder
 
-    init(queue: SyncQueue = try! SyncQueue(), client: NotesyncClient) {
+    init(
+        queue: SyncQueue = try! SyncQueue(),
+        client: NotesyncClient,
+        maxRequestBytes: Int = AppConfiguration.default.notesync.maxRequestBytes
+    ) {
         self.queue = queue
         self.client = client
+        self.maxRequestBytes = maxRequestBytes
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        self.encoder = encoder
     }
 
     func performSync() async throws {
         let pending = try queue.pending()
         guard !pending.isEmpty else { return }
-        let payload = try buildPayload(from: pending)
-        _ = try await client.send(payload: payload)
+        let ops = try buildPayload(from: pending).ops
+        let batcher = NotesyncBatcher(maxBytes: maxRequestBytes, encoder: encoder)
+        for batch in try batcher.split(ops: ops) {
+            _ = try await client.send(payload: SyncRequest(ops: batch))
+        }
         try queue.remove(items: pending)
     }
 

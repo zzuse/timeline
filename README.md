@@ -44,5 +44,7 @@ xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhon
 - Login URL: `https://zzuse.duckdns.org/login` (opens in external browser).
 - OAuth callback: `zzuse.timeline://auth/callback?code=...`
 - Code exchange: `POST /api/auth/exchange` with `{ "code": "..." }`
-- Store the JWT in `KeychainAuthTokenStore` after code exchange.
+- Refresh: `POST /auth/refresh` with the refresh token to get new tokens.
+- Access + refresh tokens are returned during code exchange and stored in `KeychainAuthTokenStore`.
+- Max request size: 10 MB. Client batches sync uploads to stay under the limit.
 - Update `AppConfiguration.default` in `timeline/Services/AppConfiguration.swift` with your backend base URL, API key, and callback scheme/host/path.
