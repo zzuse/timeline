@@ -22,12 +22,14 @@ final class NotesyncManager {
     func performSync() async throws {
         let pending = try queue.pending()
         guard !pending.isEmpty else { return }
-        let ops = try buildPayload(from: pending).ops
+        let payload = try buildPayload(from: pending)
+        let itemById = Dictionary(uniqueKeysWithValues: pending.map { ($0.opId, $0) })
         let batcher = NotesyncBatcher(maxBytes: maxRequestBytes, encoder: encoder)
-        for batch in try batcher.split(ops: ops) {
+        for batch in try batcher.split(ops: payload.ops) {
             _ = try await client.send(payload: SyncRequest(ops: batch))
+            let sentItems = batch.compactMap { itemById[$0.opId] }
+            try queue.remove(items: sentItems)
         }
-        try queue.remove(items: pending)
     }
 
     private func buildPayload(from items: [SyncQueueItem]) throws -> SyncRequest {
