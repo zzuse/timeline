@@ -85,10 +85,11 @@ final class SyncQueue {
     }
 
     func remove(items: [SyncQueueItem]) throws {
+        let files = try fileManager.contentsOfDirectory(at: baseURL, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "json" }
         for item in items {
-            let filename = fileName(for: item.opId)
-            let url = baseURL.appendingPathComponent(filename)
-            if fileManager.fileExists(atPath: url.path) {
+            let matches = files.filter { $0.lastPathComponent.contains(item.opId) }
+            for url in matches {
                 try fileManager.removeItem(at: url)
             }
         }

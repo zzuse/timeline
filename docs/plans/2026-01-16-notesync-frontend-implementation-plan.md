@@ -1478,6 +1478,13 @@ final class AuthRefreshClient {
 
 Update `AuthSessionManager` to save both tokens on code exchange.
 
+Add refresh-on-401 retry in `NotesyncClient` (or a higher-level wrapper):
+1. If a request fails with `401` or `token_expired`, load the refresh token from `AuthTokenStore`.
+2. Call `AuthRefreshClient.refresh(baseURL:apiKey:refreshToken:)` to get new tokens.
+3. Save the new access + refresh tokens.
+4. Retry the original request once (no infinite retries).
+5. If refresh fails, surface a “Please sign in again” error and clear tokens.
+
 **Step 4: Run tests to verify they pass**
 
 Run: `xcodebuild test -scheme timeline -destination 'platform=iOS Simulator,name=iPhone 15,OS=18.0' -only-testing:timelineTests/AuthTokenStoreTests.tokenStoreStoresRefreshToken`  

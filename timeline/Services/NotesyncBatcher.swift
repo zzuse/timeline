@@ -4,7 +4,11 @@ enum NotesyncBatchingError: Error {
     case opTooLarge
 }
 
-struct NotesyncBatcher {
+protocol NotesyncBatching {
+    func split(ops: [SyncOperationPayload]) throws -> [[SyncOperationPayload]]
+}
+
+struct NotesyncBatcher: NotesyncBatching {
     let maxBytes: Int
     let encoder: JSONEncoder
 

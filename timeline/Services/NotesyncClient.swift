@@ -62,6 +62,7 @@ final class NotesyncClient {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             if let http = response as? HTTPURLResponse {
                 let body = String(data: data, encoding: .utf8)
+                print("Notesync error status=\(http.statusCode) body=\(body ?? "<empty>")")
                 if shouldRefresh(statusCode: http.statusCode, body: body), !didRefresh {
                     guard let refreshToken = try tokenStore.loadRefreshToken() else {
                         throw NotesyncHTTPError(statusCode: http.statusCode, body: body)
