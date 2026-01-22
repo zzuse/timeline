@@ -22,4 +22,16 @@ struct SyncUIStateTests {
         state.isSyncing = true
         #expect(state.isSyncDisabled(isSignedIn: true))
     }
+
+    @Test func syncStateStatusStringsFallback() async throws {
+        let state = NotesyncUIState()
+        #expect(state.lastSyncStatusText == "Never")
+        #expect(state.lastErrorStatusText == "None")
+    }
+
+    @Test func restoreIsDisabledWhenSignedOut() async throws {
+        let state = NotesyncUIState()
+        #expect(state.isRestoreDisabled(isSignedIn: false))
+        #expect(state.isRestoreDisabled(isSignedIn: true) == false)
+    }
 }

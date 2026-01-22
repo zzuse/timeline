@@ -107,6 +107,54 @@ struct timelineTests {
         #expect(items[0].media.isEmpty)
     }
 
+    @Test func repositoryFullResyncEnqueuesAllNotes() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let queue = try SyncQueue(baseURL: temp)
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore(), syncQueue: queue)
+
+        let a = Note(text: "A", imagePaths: [], tags: [])
+        let b = Note(text: "B", imagePaths: [], tags: [])
+        context.insert(a)
+        context.insert(b)
+        try context.save()
+
+        try repo.enqueueFullResync()
+
+        let items = try queue.pending()
+        #expect(items.count == 2)
+        #expect(items.allSatisfy { $0.opType == .update })
+    }
+
+    @Test func repositoryUpsertsNotesById() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Note.self, Tag.self, configurations: config)
+        let context = ModelContext(container)
+        let repo = NotesRepository(context: context, imageStore: ImageStore(), audioStore: AudioStore())
+
+        let note = Note(text: "Old", imagePaths: [], tags: [])
+        note.id = "note-1"
+        context.insert(note)
+        try context.save()
+
+        try repo.upsertNote(
+            id: "note-1",
+            text: "New",
+            isPinned: false,
+            tags: [],
+            createdAt: note.createdAt,
+            updatedAt: Date(),
+            imagePaths: [],
+            audioPaths: []
+        )
+
+        let stored = try context.fetch(FetchDescriptor<Note>())
+        #expect(stored.count == 1)
+        #expect(stored.first?.text == "New")
+    }
+
     @Test func noteSorterPinnedFirst() async throws {
         let pinned = Note(text: "Pinned", imagePaths: [], tags: [])
         pinned.isPinned = true

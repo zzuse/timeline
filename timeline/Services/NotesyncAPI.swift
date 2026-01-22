@@ -40,3 +40,8 @@ struct SyncNoteResult: Codable {
 struct SyncResponse: Codable {
     let results: [SyncNoteResult]
 }
+
+struct NotesyncRestoreResponse: Codable {
+    let notes: [SyncNotePayload]
+    let media: [SyncMediaPayload]
+}
