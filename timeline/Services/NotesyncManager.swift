@@ -25,10 +25,17 @@ final class NotesyncManager {
     func performSync() async throws {
         let pending = try queue.pending()
         guard !pending.isEmpty else { return }
+        print("Notesync pending ops=\(pending.count)")
+        for item in pending {
+            print("Notesync pending opId=\(item.opId) type=\(item.opType.rawValue) noteId=\(item.note.id)")
+        }
         let payload = try buildPayload(from: pending)
         let itemById = Dictionary(uniqueKeysWithValues: pending.map { ($0.opId, $0) })
         for batch in try batcher.split(ops: payload.ops) {
-            _ = try await client.send(payload: SyncRequest(ops: batch))
+            let response = try await client.send(payload: SyncRequest(ops: batch))
+            for result in response.results {
+                print("Notesync result op noteId=\(result.noteId) result=\(result.result)")
+            }
             let sentItems = batch.compactMap { itemById[$0.opId] }
             try queue.remove(items: sentItems)
         }
