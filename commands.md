@@ -55,6 +55,8 @@ git status --porcelain
 # resolve a remote PR conflict
 git fetch origin settings-resync-restore
 git worktree add .worktrees/settings-resync-restore origin/settings-resync-restore
+git tag -a v1.0.0 -m "Version 1.0 release"
+git push -u origin --tags
 ```
 ## Install gh for create PR
 ```sh
