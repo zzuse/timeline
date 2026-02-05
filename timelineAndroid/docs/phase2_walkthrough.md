@@ -7,7 +7,7 @@ Phase 2 sync implementation is complete! The Android app now has full OAuth auth
 ### 1. Data Layer Updates
 
 #### Note Model Enhancements
-[lib/models/note.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/models/note.dart)
+[lib/models/note.dart](file://../lib/models/note.dart)
 
 Added sync-related fields:
 - `serverId` - Server-side ID for the note
@@ -15,7 +15,7 @@ Added sync-related fields:
 - `isDirty` - Flag indicating local changes not yet synced
 
 #### Database Migration
-[lib/data/database_helper.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/database_helper.dart)
+[lib/data/database_helper.dart](file://../lib/data/database_helper.dart)
 
 - Migrated database from v1 to v2
 - Added sync columns: `serverId`, `lastSyncedAt`, `isDirty`
@@ -27,7 +27,7 @@ Added sync-related fields:
 ### 2. Sync Services
 
 #### AuthSessionManager
-[lib/services/auth_session_manager.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/auth_session_manager.dart)
+[lib/services/auth_session_manager.dart](file://../lib/services/auth_session_manager.dart)
 
 OAuth authentication manager:
 - Initiates OAuth flow in external browser
@@ -38,7 +38,7 @@ OAuth authentication manager:
 - Provides authentication state via `ChangeNotifier`
 
 #### NotesyncClient  
-[lib/services/notesync_client.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/notesync_client.dart)
+[lib/services/notesync_client.dart](file://../lib/services/notesync_client.dart)
 
 HTTP API client for sync operations:
 - `sendSync()` - Push note changes to server
@@ -48,7 +48,7 @@ HTTP API client for sync operations:
 - Error handling and retry logic
 
 #### SyncQueue
-[lib/services/sync_queue.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_queue.dart)
+[lib/services/sync_queue.dart](file://../lib/services/sync_queue.dart)
 
 Persistent offline queue:
 - SQLite-backed queue for pending sync operations
@@ -57,7 +57,7 @@ Persistent offline queue:
 - Automatic cleanup of failed items after max retries
 
 #### SyncEngine
-[lib/services/sync_engine.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_engine.dart)
+[lib/services/sync_engine.dart](file://../lib/services/sync_engine.dart)
 
 Sync orchestrator (most complex component):
 - **Push** - Uploads dirty (modified) notes to server
@@ -73,7 +73,7 @@ Sync orchestrator (most complex component):
 ### 3. Configuration
 
 #### Sync Config
-[lib/config/sync_config.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/config/sync_config.dart)
+[lib/config/sync_config.dart](file://../lib/config/sync_config.dart)
 
 Configuration matching iOS implementation:
 - Base URL: `https://zzuse.duckdns.org`
@@ -112,7 +112,7 @@ The server uses the `client` parameter to determine which callback URL to redire
 ### 4. UI Integration
 
 #### Settings Screen
-[lib/ui/screens/settings_screen.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/ui/screens/settings_screen.dart)
+[lib/ui/screens/settings_screen.dart](file://../lib/ui/screens/settings_screen.dart)
 
 Full sync UI:
 - **Account Section**
@@ -126,14 +126,14 @@ Full sync UI:
 - **Real-time Updates** - Uses Provider to watch sync state
 
 #### Main App
-[lib/main.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/main.dart)
+[lib/main.dart](file://../lib/main.dart)
 
 Provider setup:
 - Initializes all sync services
 - Provides services via `MultiProvider`
 
 #### Android Manifest
-[android/app/src/main/AndroidManifest.xml](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/android/app/src/main/AndroidManifest.xml)
+[android/app/src/main/AndroidManifest.xml](file://../android/app/src/main/AndroidManifest.xml)
 
 - Added `INTERNET` permission
 - Added deep link intent filter for OAuth callback:
@@ -147,7 +147,7 @@ Provider setup:
 
 ### 1. Update API Key
 
-Edit [lib/config/sync_config.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/config/sync_config.dart):
+Edit [lib/config/sync_config.dart](file://../lib/config/sync_config.dart):
 
 ```dart
 static const String apiKey = 'YOUR_ACTUAL_API_KEY_HERE';

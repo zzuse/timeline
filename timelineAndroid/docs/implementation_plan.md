@@ -260,4 +260,4 @@ Main screen features:
 
 3. **Sync features**: Include OAuth sync in Phase 1, or focus on local-first features first?
 
-4. **Project location**: Should I create the Android project in `/Users/z/Documents/Code/Self/timeline/timelineAndroid/android/` or a different location?
+4. **Project location**: Should I create the Android project in `timelineAndroid/android/` or a different location?

@@ -9,7 +9,7 @@ This document outlines the key differences between the Android and iOS Timeline 
 - **Compression**: 82% JPEG quality
 - **Result**: Camera photos ~450KB
 
-**Code:** [`lib/data/image_store.dart`](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/image_store.dart)
+**Code:** [`lib/data/image_store.dart`](file://../lib/data/image_store.dart)
 ```dart
 static const _jpegQuality = 82;
 static const _maxDimension = 1920;

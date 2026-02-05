@@ -16,7 +16,7 @@ export PATH="$HOME/development/flutter/bin:$PATH"
 flutter --version
 
 # Create the project
-cd /Users/z/Documents/Code/Self/timeline/timelineAndroid
+cd timelineAndroid
 flutter create --org com.zzuse --project-name timeline --platforms android .
 ```
 
@@ -70,7 +70,7 @@ flutter test --watch
 ## Android Device Setup
 ```bash
 # Navigate to your project
-cd /Users/z/Documents/Code/Self/timeline/timelineAndroid
+cd timelineAndroid
 
 # Add Flutter to PATH
 export PATH="$HOME/development/flutter/bin:$PATH"
@@ -131,7 +131,7 @@ sdkmanager "platform-tools"
 # Run
 ```bash
 # Then run Flutter again
-cd /Users/z/Documents/Code/Self/timeline/timelineAndroid
+cd timelineAndroid
 flutter run
 ```
 

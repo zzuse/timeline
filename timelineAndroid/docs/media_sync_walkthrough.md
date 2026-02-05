@@ -9,7 +9,7 @@ Successfully implemented media (images/audio) sync for the Android Timeline app.
 
 Added `SyncMediaPayload` class to support media sync:
 
-**[lib/services/notesync_client.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/notesync_client.dart#L72-L113)**
+**[lib/services/notesync_client.dart](file://../lib/services/notesync_client.dart#L72-L113)**
 ```dart
 class SyncMediaPayload {
   final String id;
@@ -26,7 +26,7 @@ Updated `SyncOperationPayload` and `NotesyncRestoreResponse` to use typed `List<
 
 ### 2. Media Utilities Helper
 
-**[lib/services/media_utils.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/media_utils.dart)**
+**[lib/services/media_utils.dart](file://../lib/services/media_utils.dart)**
 
 Created utility functions for:
 - **SHA256 checksums** - Calculate file integrity hashes
@@ -36,7 +36,7 @@ Created utility functions for:
 
 ### 3. SyncQueue Rewrite
 
-**[lib/services/sync_queue.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_queue.dart)**
+**[lib/services/sync_queue.dart](file://../lib/services/sync_queue.dart)**
 
 Completely rewrote to match iOS implementation:
 - **File-based queue** instead of database-based
@@ -54,7 +54,7 @@ class SyncQueueItem { /* Complete operation with note + media */ }
 
 ### 4. SyncEngine Media Upload
 
-**[lib/services/sync_engine.dart:_processSyncQueue()](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_engine.dart#L142-L207)**
+**[lib/services/sync_engine.dart:_processSyncQueue()](file://../lib/services/sync_engine.dart#L142-L207)**
 
 Updated to handle media upload:
 1. Read queued items with media metadata
@@ -67,7 +67,7 @@ Updated to handle media upload:
 
 ### 5. SyncEngine Media Download
 
-**[lib/services/sync_engine.dart:_pullServerNotes()](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_engine.dart#L210-L280)**
+**[lib/services/sync_engine.dart:_pullServerNotes()](file://../lib/services/sync_engine.dart#L210-L280)**
 
 Updated to handle media download:
 1. Receive `NotesyncRestoreResponse` with media
@@ -81,13 +81,13 @@ Updated to handle media download:
 
 Added helper methods for sync operations:
 
-**[lib/data/image_store.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/image_store.dart#L65-L82)**
+**[lib/data/image_store.dart](file://../lib/data/image_store.dart#L65-L82)**
 ```dart
 Future<void> saveBytes(String filename, List<int> bytes)
 Future<File> getFile(String filename)
 ```
 
-**[lib/data/audio_store.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/audio_store.dart#L51-L68)**
+**[lib/data/audio_store.dart](file://../lib/data/audio_store.dart#L51-L68)**
 ```dart
 Future<void> saveBytes(String filename, List<int> bytes)
 Future<File> getFile(String filename)
@@ -195,13 +195,13 @@ graph TB
 
 | File | Changes |
 |------|---------|
-| [pubspec.yaml](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/pubspec.yaml) | Added `crypto: ^3.0.5` dependency |
-| [notesync_client.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/notesync_client.dart) | Added `SyncMediaPayload`, updated models |
-| [media_utils.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/media_utils.dart) | **NEW** - SHA256, base64, content-type utils |
-| [sync_queue.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_queue.dart) | **COMPLETE REWRITE** - File-based queue with media |
-| [sync_engine.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_engine.dart) | Updated upload/download for media handling |
-| [image_store.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/image_store.dart) | Added `saveBytes()`, `getFile()` methods |
-| [audio_store.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/data/audio_store.dart) | Added `saveBytes()`, `getFile()` methods |
+| [pubspec.yaml](file://../pubspec.yaml) | Added `crypto: ^3.0.5` dependency |
+| [notesync_client.dart](file://../lib/services/notesync_client.dart) | Added `SyncMediaPayload`, updated models |
+| [media_utils.dart](file://../lib/services/media_utils.dart) | **NEW** - SHA256, base64, content-type utils |
+| [sync_queue.dart](file://../lib/services/sync_queue.dart) | **COMPLETE REWRITE** - File-based queue with media |
+| [sync_engine.dart](file://../lib/services/sync_engine.dart) | Updated upload/download for media handling |
+| [image_store.dart](file://../lib/data/image_store.dart) | Added `saveBytes()`, `getFile()` methods |
+| [audio_store.dart](file://../lib/data/audio_store.dart) | Added `saveBytes()`, `getFile()` methods |
 
 ## Testing Steps
 

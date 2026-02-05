@@ -6,7 +6,7 @@
 
 Since `app_links` and `uni_links` had Gradle issues, I implemented **native deep link handling** without any external packages:
 
-**Android Side** - [MainActivity.kt](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/android/app/src/main/kotlin/com/zzuse/timeline/MainActivity.kt):
+**Android Side** - [MainActivity.kt](file://../android/app/src/main/kotlin/com/zzuse/timeline/MainActivity.kt):
 ```kotlin
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.zzuse.timeline/deeplink"
@@ -32,7 +32,7 @@ class MainActivity: FlutterActivity() {
 }
 ```
 
-**Flutter Side** - [main.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/main.dart):
+**Flutter Side** - [main.dart](file://../lib/main.dart):
 ```dart
 static const platform = MethodChannel('com.zzuse.timeline/deeplink');
 
@@ -53,7 +53,7 @@ void _setupDeepLinkListener() {
 
 ### 1. Update API Key First
 
-Edit [lib/config/sync_config.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/config/sync_config.dart):
+Edit [lib/config/sync_config.dart](file://../lib/config/sync_config.dart):
 ```dart
 static const String apiKey = 'YOUR_ACTUAL_API_KEY';  // Replace 'replace-me'
 ```
@@ -85,10 +85,10 @@ flutter run
 
 | Service | Purpose | File |
 |---------|---------|------|
-| **AuthSessionManager** | OAuth login, token storage, auto-refresh | [auth_session_manager.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/auth_session_manager.dart) |
-| **NotesyncClient** | HTTP API client for `/api/notesync` | [notesync_client.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/notesync_client.dart) |
-| **SyncEngine** | Orchestrates push/pull, conflict resolution | [sync_engine.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_engine.dart) |
-| **SyncQueue** | SQLite offline queue with retry logic | [sync_queue.dart](file:///Users/z/Documents/Code/Self/timeline/timelineAndroid/lib/services/sync_queue.dart) |
+| **AuthSessionManager** | OAuth login, token storage, auto-refresh | [auth_session_manager.dart](file://../lib/services/auth_session_manager.dart) |
+| **NotesyncClient** | HTTP API client for `/api/notesync` | [notesync_client.dart](file://../lib/services/notesync_client.dart) |
+| **SyncEngine** | Orchestrates push/pull, conflict resolution | [sync_engine.dart](file://../lib/services/sync_engine.dart) |
+| **SyncQueue** | SQLite offline queue with retry logic | [sync_queue.dart](file://../lib/services/sync_queue.dart) |
 
 ### Database Migration
 

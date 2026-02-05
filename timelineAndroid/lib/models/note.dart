@@ -1,3 +1,5 @@
+import 'package:uuid/uuid.dart';
+
 /// Note model for timeline entries
 class Note {
   final String id;
@@ -37,7 +39,7 @@ class Note {
   }) {
     final now = DateTime.now();
     return Note(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: const Uuid().v4(),
       text: text,
       createdAt: now,
       updatedAt: now,

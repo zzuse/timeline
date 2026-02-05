@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:meta/meta.dart';
 import '../models/note.dart';
 import 'database_helper.dart';
 import 'image_store.dart';
@@ -23,6 +24,19 @@ class NotesRepository {
   })  : _db = db ?? DatabaseHelper.instance,
         _imageStore = imageStore ?? ImageStore(),
         _audioStore = audioStore ?? AudioStore();
+        
+  @visibleForTesting
+  factory NotesRepository.test({
+    DatabaseHelper? db,
+    ImageStore? imageStore,
+    AudioStore? audioStore,
+  }) {
+    return NotesRepository._internal(
+      db: db,
+      imageStore: imageStore,
+      audioStore: audioStore,
+    );
+  }
 
   ImageStore get imageStore => _imageStore;
   AudioStore get audioStore => _audioStore;
