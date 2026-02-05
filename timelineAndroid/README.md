@@ -72,6 +72,12 @@ static const apiKey = 'your-api-key';
 4. Check server logs for media upload
 5. Test download on another device
 
+### Automated Verification
+Run the integration test suite to verify media encoding/decoding logic:
+```bash
+flutter test test/integration/media_sync_test.dart
+```
+
 See [docs/media_sync_walkthrough.md](docs/media_sync_walkthrough.md) for architecture details.
 
 ## Documentation

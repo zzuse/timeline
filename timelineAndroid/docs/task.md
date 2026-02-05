@@ -51,10 +51,45 @@ Develop an Android version of the iOS Timeline Notes app using Flutter/Dart.
 - [x] Swipe actions (pin, delete)
 
 ### Testing & Verification
-- [/] Verify build compiles
-- [ ] Test on device/emulator
+- [x] Verify build compiles
+- [x] Test on device/emulator
 
-### Sync Services (Optional Phase 2)
-- [ ] Implement NotesyncClient
-- [ ] Implement AuthSessionManager
-- [ ] Implement SyncQueue
+### Unit Tests (TDD)
+- [x] Create test suite plan
+- [x] Implement Note model tests
+- [x] Implement MediaUtils tests
+- [x] Implement NotesyncClient tests
+- [x] Implement SyncQueue tests
+- [x] Implement DatabaseHelper tests
+- [x] Implement NotesRepository tests
+- [x] Implement ImageStore tests
+- [x] Implement SyncEngine tests
+
+### Phase 2: Sync Services
+- [x] Create implementation plan for sync features
+- [x] Analyze iOS implementation for API details
+- [x] Update sync config with actual endpoints
+- [x] Update Note model with sync fields
+- [x] Update database schema (add sync columns)
+- [x] Implement AuthSessionManager
+- [x] Implement NotesyncClient (API client)
+- [x] Implement SyncEngine (orchestrator)
+- [x] Implement SyncQueue (offline queue)
+- [x] Update UI with sync indicators
+- [x] Fix deep link OAuth callback (native MethodChannel)
+- [x] Fix TokenResponse parsing (snake_case field names)
+- [x] Test OAuth flow end-to-end
+- [x] Test text sync (create/update/delete)
+
+### Phase 3: Media Sync
+- [x] Review and approve media sync implementation plan
+- [x] Add crypto package for SHA256 checksums
+- [x] Update sync models (add SyncMediaPayload)
+- [x] Update SyncQueue to handle media files
+- [x] Update SyncEngine upload with base64 encoding
+- [x] Update SyncEngine download with base64 decoding
+- [x] Create media_utils.dart helper
+- [x] App compiles and runs successfully
+- [x] Test image sync end-to-end
+- [x] Test audio sync end-to-end
+- [x] Test large file handling

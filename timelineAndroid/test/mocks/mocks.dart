@@ -165,6 +165,12 @@ class MockNotesRepository implements NotesRepository {
 class MockImageStore implements ImageStore {
   final Map<String, List<int>> _images = {};
   
+  // Test helpers
+  void clearImages() => _images.clear();
+  bool hasImage(String filename) => _images.containsKey(filename);
+  List<int>? getImageBytes(String filename) => _images[filename];
+  void addImage(String filename, List<int> bytes) => _images[filename] = bytes;
+  
   @override
   Future<String> getImagePath(String filename) async {
     // Assuming _images stores the content, and we need a path.
@@ -178,11 +184,6 @@ class MockImageStore implements ImageStore {
   Future<String> url({required String for_}) async {
     return '/tmp/$for_';
   }
-  
-  // Test helpers
-  void addImage(String filename, List<int> bytes) => _images[filename] = bytes;
-  void clearImages() => _images.clear();
-  bool hasImage(String filename) => _images.containsKey(filename);
   
   @override
   Future<void> init() async {}
@@ -395,6 +396,7 @@ class MockSyncQueue implements SyncQueue {
   void addItem(SyncQueueItem item) => _items.add(item);
   void clearItems() => _items.clear();
   int get itemCount => _items.length;
+  void registerMediaFile(String filename, File file) => _mediaFiles[filename] = file;
   
   @override
   Future<void> init() async {}
@@ -499,8 +501,11 @@ class MockNotesyncClient implements NotesyncClient {
   void setShouldSucceed(bool value) => _shouldSucceed = value;
   void setExceptionToThrow(Exception? e) => _exceptionToThrow = e;
   
+  SyncRequest? lastSyncRequest;
+  
   @override
   Future<SyncResponse> sendSync(SyncRequest request) async {
+    lastSyncRequest = request;
     if (_exceptionToThrow != null) throw _exceptionToThrow!;
     if (!_shouldSucceed) throw Exception('Mock sync failed');
     return _syncResponse ?? SyncResponse(results: []);

@@ -1,33 +1,53 @@
 # Timeline Notes
 
-A local-first iOS app for short personal notes, similar to a lightweight timeline. Create quick entries with photos, tags, and optional voice recordings, then browse them chronologically with pinning and search.
+A local-first cross-platform app for short personal notes, similar to a lightweight timeline. Create quick entries with photos, tags, and optional voice recordings, then browse them chronologically with pinning and search.
 
 ## Features
 - Short notes with text, images, and audio clips
 - Tags with autocomplete and filtering
 - Pinned notes shown first, then newest-to-oldest
 - Detail view with edit/delete/pin actions
-- Local-first storage with optional manual sync
+- Local-first storage with optional manual sync (NoteSync)
+- **Cross-Platform**: Available on iOS (SwiftUI) and Android (Flutter)
 
 ## Tech Stack
+
+### iOS
 - SwiftUI + SwiftData
 - iOS 17+ (Xcode 16+)
 - PhotosPicker and Camera
 - AVFoundation for audio recording/playback
 
+### Android
+- Flutter + Dart
+- SQLite (sqflite)
+- Material 3 Design
+- `audioplayers` / `record` packages
+
 ## Data Storage
-- SwiftData stores note metadata and media paths
-- Images are saved as JPEGs under Documents/Images
-- Audio clips are saved as M4A under Documents/Audio
+- **iOS**: SwiftData stores note metadata and media paths
+- **Android**: SQLite stores note metadata
+- Images are saved as JPEGs locally
+- Audio clips are saved as M4A locally
 
 ## Requirements
-- macOS with Xcode 16+
-- iOS Simulator or device running iOS 17+
+- **iOS**: macOS with Xcode 16+
+- **Android**: Flutter SDK, Android Studio/VSCode
 
 ## Run
+
+### iOS
 1. Open `timeline.xcodeproj` in Xcode.
 2. Select a simulator or device.
 3. Build and run the `timeline` scheme.
+
+### Android
+1. Navigate to `timelineAndroid` directory:
+   ```bash
+   cd timelineAndroid
+   ```
+2. Follow instructions in [timelineAndroid/README.md](timelineAndroid/README.md).
+
 
 ## Tests
 ```bash
